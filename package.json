@@ -1,0 +1,16 @@
+{
+  "name": "itws-discord-bot",
+  "version": "1.0.0",
+  "description": "Test Discord Role Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Simar Singh",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^12.2.0",
+    "dotenv": "^8.2.0"
+  }
+}
