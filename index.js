@@ -46,6 +46,7 @@ bot.once("ready", async () => {
         roles['Team' + team] = getRoleByName('Intro Team ' + team).id;
     }
 
+    roles['Capstone'] = getRoleByName('Capstone').id;
     for (let team = 1; team <= 6; team++) {
 	roles['Capstone' + team] = getRoleByName('Capstone Team ' + team).id;
     }
