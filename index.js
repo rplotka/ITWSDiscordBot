@@ -46,6 +46,10 @@ bot.once("ready", async () => {
         roles['Team' + team] = getRoleByName('Intro Team ' + team).id;
     }
 
+    for (let team = 1; team <= 6; team++) {
+	roles['Capstone' + team] = getRoleByName('Capstone Team ' + team).id;
+    }
+
     // console.log(roles);
 });
 
@@ -76,20 +80,21 @@ bot.on("message", (message) => {
         } else if (desiredRoleName in roles) {
             // User chose a valid role
             message.member.roles.add(roles[desiredRoleName])
+	    message.member.send("Added " + desiredRoleName);
         } else {
             // User chose an invalid role
             message.channel.send("That's not a valid role!");
         }
     } /*else if (command == "teamrolegenerate") {
-        for (let team = 3; team <= 19; team++) {
+        for (let team = 1; team <= 6; team++) {
             message.guild.roles.create({
                 data: {
-                    name: "Intro Team " + team,
+                    name: "Capstone Team " + team,
                     mentionable: true
                 }
             })
         }
-    } else if (command == "team") {
+    } /*else if (command == "team") {
         const team = parseInt(args[0])
 
         // Validate team input
