@@ -42,6 +42,8 @@ bot.once("ready", async () => {
         roles['Class' + gradYear] = getRoleByName('Class of 20' + gradYear).id;
     }
 
+    roles['Graduate'] = getRoleByName('Graduate').id;
+
     for (let team = 1; team <= 19; team++) {
         roles['Team' + team] = getRoleByName('Intro Team ' + team).id;
     }
