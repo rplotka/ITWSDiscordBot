@@ -6,7 +6,7 @@ dotenv.config()
 const Discord = require("discord.js");
 
 /** The prefix that commands use. */
-const commandPrefix = "!";
+const commandPrefix = ".";
 
 const itwsServerId = "735867785879748709";
 
@@ -50,9 +50,10 @@ bot.once("ready", async () => {
 
     roles['Capstone'] = getRoleByName('Capstone').id;
     for (let team = 1; team <= 6; team++) {
-	roles['Capstone' + team] = getRoleByName('Capstone Team ' + team).id;
+	    roles['Capstone' + team] = getRoleByName('Capstone Team ' + team).id;
     }
 
+    roles['AmongUs'] = getRoleByName('Among Us').id;
     // console.log(roles);
 });
 
