@@ -6,7 +6,7 @@ dotenv.config()
 const Discord = require("discord.js");
 
 /** The prefix that commands use. */
-const commandPrefix = ".";
+const commandPrefix = "!";
 
 const itwsServerId = "735867785879748709";
 
