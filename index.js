@@ -54,6 +54,7 @@ bot.once("ready", async () => {
     }
 
     roles['AmongUs'] = getRoleByName('Among Us').id;
+    roles['DnD'] = getRoleByName('DnD').id;
     // console.log(roles);
 });
 
