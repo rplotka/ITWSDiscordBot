@@ -55,6 +55,7 @@ bot.once("ready", async () => {
 
     roles['AmongUs'] = getRoleByName('Among Us').id;
     roles['DnD'] = getRoleByName('DnD').id;
+    roles['test_role'] = getRoleByName('test_role').id;
     // console.log(roles);
 });
 
@@ -90,7 +91,71 @@ bot.on("message", (message) => {
             // User chose an invalid role
             message.channel.send("That's not a valid role!");
         }
-    } /*else if (command == "teamrolegenerate") {
+    } 
+    
+    else if (command === "remove") {
+        const desiredRoleName = args[0];
+
+        // !remove range <role> <start> <end>
+        if(desiredRoleName === "range") {
+            desiredRoleName = args[1];
+            for(var team = desiredRoleName[2]; team <= desiredRoleName[3]; team++) {
+                // Find the team channels
+                const categoryChannels = message.guild.channels.cache.get(role[desiredRoleName]).children;
+                const teamTextChannel = categoryChannels.find(channel => channel.name === "team-" + team && channel.type == "text");
+                const teamVoiceChannel = categoryChannels.find(channel => channel.name === "Team " + team && channel.type == "voice");
+
+                // If either doesn't exist, quit
+                if (!teamTextChannel || !teamVoiceChannel) {
+                    message.channel.send("Team channel does not exist");
+                    return;
+                }
+                message.guild.members.fetch().then((member) => member.map((user, v) => {
+                    user.roles.cache.forEach((r) => {
+                        if(r.id == roles[desiredRoleName]) {
+                            // Wait for both channel overrides to complete
+                            Promise.all([
+                                teamTextChannel.updateOverwrite(user.id, {
+                                    VIEW_CHANNEL: false
+                                })
+                                ,
+                                teamVoiceChannel.updateOverwrite(user.id, {
+                                    VIEW_CHANNEL: false,
+                                    CONNECT: false
+                                })
+                            ])
+                                .then(() => {message.channel.send("removed from team  " + team)})
+                                .catch(error => {
+                                    console.error(error);
+                                    message.channel.send("Failed to remove from that team...");
+                                })
+                            }
+                    })
+                }));
+            }
+
+        }
+        
+
+        else {
+            if (desiredRoleName in roles) {
+                message.guild.members.fetch().then((member) => member.map((user, v) => {
+                    user.roles.cache.forEach((r) => {
+                        if(r.id == roles[desiredRoleName]) {
+                            user.roles.remove(roles[desiredRoleName]);
+                        }
+                    })
+                }));
+            } 
+            
+            else {
+                message.channel.send("That's not a valid role!");
+            }
+        }
+    }
+
+
+    /*else if (command == "teamrolegenerate") {
         for (let team = 1; team <= 6; team++) {
             message.guild.roles.create({
                 data: {
