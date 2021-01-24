@@ -18,14 +18,14 @@ module.exports = {
         'courses add "Intro to ITWS" "intro" 10',
         'courses reset "Intro to ITWS"',
         'courses remove "Intro to ITWS"'
-    ], 
+    ],
     async execute(message, args) {
         if (args.length === 0) {
             return;
         }
-        
+
         const server = message.client.guilds.cache.get(DISCORD_SERVER_ID);
-        
+
         // Should be list, add, reset, etc.
         const subcommand = args[0].toLowerCase();
 
@@ -43,7 +43,7 @@ module.exports = {
                 title,
                 shortTitle
             });
-            
+
             // Create course role
             const courseRole = await server.roles.create({
                 data: {
@@ -76,25 +76,90 @@ module.exports = {
 
             const courseAnnouncementsChannel = await server.channels.create(newCourse.shortTitle + "-announcements", {
                 type: "text",
+                topic: `📢 Course announcements for **${newCourse.title}**!`,
                 parent: courseCategory.id
             });
 
             await server.channels.create("general", {
                 type: "text",
+                topic: `💬 General chat for **${newCourse.title}**.`,
                 parent: courseCategory.id
             });
 
             await server.channels.create("discussion", {
                 type: "text",
+                topic: `🗣️ Discussion room for **${newCourse.title}**.`,
                 parent: courseCategory.id
             });
+
+            await newCourse.save();
 
             // Teams
             //  - role
             //  - text channel
             //  - voice channel
 
-            await newCourse.save();
+            for (let teamNumber = 1; teamNumber <= teamCount; teamNumber++) {
+                // DB record
+                const courseTeam = CourseTeam.build({
+                    CourseId: newCourse.id,
+                    teamId: teamNumber
+                });
+
+                // Role
+                const teamRole = await server.roles.create({
+                    data: {
+                        name: `${newCourse.shortTitle} Team ${teamNumber}`
+                    },
+                    reason: `Team role for new course ${newCourse.title}, team ${teamNumber}`
+                });
+                courseTeam.discordRoleId = teamRole.id;
+
+                // Text channel
+                const teamTextChannel = await server.channels.create(`team-${teamNumber}`, {
+                    type: "text",
+                    parent: courseCategory.id,
+                    topic: `🔒 Private discussion channel for **Team ${teamNumber}** in **${newCourse.title}**.`,
+                    permissionOverwrites: [
+                        {
+                            id: server.id,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: courseRole.id,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: teamRole.id,
+                            allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY"]
+                        }
+                    ]
+                });
+                courseTeam.discordTextChannelId = teamTextChannel.id;
+
+                // Voice channel
+                const teamVoiceChannel = await server.channels.create(`Team ${teamNumber}`, {
+                    type: "voice",
+                    parent: courseCategory.id,
+                    permissionOverwrites: [
+                        {
+                            id: server.id,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: courseRole.id,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: teamRole.id,
+                            allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"]
+                        }
+                    ]
+                });
+                courseTeam.discordVoiceChannelId = teamVoiceChannel.id;
+
+                await courseTeam.save();
+            }
 
             const messageLines = [
                 `**Created course ${newCourse.title} (${newCourse.shortTitle})**`,
@@ -116,8 +181,27 @@ module.exports = {
                 return message.reply("Cannot find course.");
             }
 
-            // Delete team channels
-            // TODO
+            // Delete team roles and channels
+            const courseTeams = await CourseTeam.findAll({
+                where: {
+                    CourseId: course.id
+                }
+            });
+            for (const courseTeam of courseTeams) {
+                // Delete role
+                const courseRole = await server.roles.fetch(courseTeam.discordRoleId)
+                await courseRole.delete("Course being removed");
+
+                // Delete text channel
+                const teamTextChannel = server.channels.cache.get(courseTeam.discordTextChannelId);
+                await teamTextChannel.delete("Course being removed");
+
+                // Delete voice channel
+                const teamVoiceChannel = server.channels.cache.get(courseTeam.discordVoiceChannelId);
+                await teamVoiceChannel.delete("Course being removed");
+
+                await courseTeam.destroy();
+            }
 
             // Delete course category and children
             if (course.discordCategoryId) {
