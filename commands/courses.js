@@ -70,8 +70,24 @@ module.exports = {
             newCourse.discordCategoryId = courseCategory.id;
 
             // Create category channels
-            //  - announcements
-            //  - general
+            // - announcements broadcast
+            // - general
+            // - discussion
+
+            const courseAnnouncementsChannel = await server.channels.create(newCourse.shortTitle + "-announcements", {
+                type: "text",
+                parent: courseCategory.id
+            });
+
+            await server.channels.create("general", {
+                type: "text",
+                parent: courseCategory.id
+            });
+
+            await server.channels.create("discussion", {
+                type: "text",
+                parent: courseCategory.id
+            });
 
             // Teams
             //  - role
@@ -79,6 +95,12 @@ module.exports = {
             //  - voice channel
 
             await newCourse.save();
+
+            const messageLines = [
+                `**Created course ${newCourse.title} (${newCourse.shortTitle})**`,
+                `Go into the settings of ${courseAnnouncementsChannel} to turn it into a real Announcements channel.`
+            ];
+            message.reply(messageLines.join("\n"));
         } else if (subcommand === "remove") {
             const identifier = args[1];
             const course = await Course.findOne({
@@ -94,12 +116,22 @@ module.exports = {
                 return message.reply("Cannot find course.");
             }
 
-            // Delete course category
+            // Delete team channels
+            // TODO
+
+            // Delete course category and children
             if (course.discordCategoryId) {
+                // Delete children first!!!!
+                await Promise.all(
+                    server.channels.cache
+                        .array()
+                        .filter(channel => channel.parent && channel.parent == course.discordCategoryId)
+                        .map(childChannel => childChannel.delete("Course being removed"))
+                );
+
                 const courseCategory = server.channels.cache.get(course.discordCategoryId);
                 await courseCategory.delete("Course being removed");
             }
-            //  - All children
 
             // Delete course role
             if (course.discordRoleId) {
