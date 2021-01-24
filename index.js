@@ -10,6 +10,8 @@ const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
 const itwsServerId = process.env.DISCORD_SERVER_ID;
 
+require("./db");
+
 // Define Roles with id's
 /** Role names matched to role IDs */
 const roles = {};
