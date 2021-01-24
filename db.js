@@ -51,6 +51,32 @@ const CourseEnrollment = sequelize.define("CourseEnrollment", {
     }
 });
 
+const Group = sequelize.define("Group", {
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: "Full title of group like Dungeons & Dragons"
+    },
+    shortTitle: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: "Shorthand title like DnD for channel and role names"
+    },
+    discordOwnerUserId: {
+        type: DataTypes.STRING,
+        comment: 'ID of user that can manage this group'
+    },
+    discordRoleId: {
+        type: DataTypes.STRING
+    },
+    discordTextChannelId: {
+        type: DataTypes.STRING
+    },
+    discordVoiceChannelId: {
+        type: DataTypes.STRING
+    }
+});
+
 // Associations
 // https://sequelize.org/master/manual/assocs.html
 Course.hasMany(CourseEnrollment, {
@@ -84,5 +110,6 @@ sequelize.authenticate()
 module.exports = {
     Course,
     CourseEnrollment,
-    CourseTeam
+    CourseTeam,
+    Group
 };
