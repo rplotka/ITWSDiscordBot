@@ -1,3 +1,4 @@
+const fetch = require("node-fetch");
 const { Op } = require("sequelize");
 const { Course, CourseEnrollment, CourseTeam } = require("../db");
 
@@ -39,6 +40,24 @@ module.exports = {
                 ...courses.map(course => `${course.id}\t| ${course.title}`)
             ];
             message.channel.send(messageLines.join("\n"));
+        } else if (subcommand === "sync") {
+            if (message.attachments.size === 0) {
+                return message.reply("Missing the attachment!");
+            }
+            const attachment = message.attachments.first();
+            
+            // Download attachment
+            const response = await fetch(attachment.url);
+            const text = await response.text();
+            const emails = text.split(',');
+
+            // Find Discord account of users
+            const notFoundRCSIDs = [];
+            const foundRCSIDs = [];
+            for (const email of emails) {
+                const rcsID = email.replace("@rpi.edu", "");
+            }
+
         } else if (subcommand === "add") {
             const [title, shortTitle, teamCount] = args.slice(1);
             const newCourse = Course.build({
