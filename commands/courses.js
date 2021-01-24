@@ -1,7 +1,9 @@
 const { Op } = require("sequelize");
 const { Course, CourseEnrollment, CourseTeam } = require("../db");
 
-const DISCORD_SERVER_ID = process.env.DISCORD_SERVER_ID;
+const SERVER_ID = process.env.DISCORD_SERVER_ID;
+const ADMIN_ROLE_ID = process.env.DISCORD_ADMIN_ROLE_ID;
+
 
 module.exports = {
     name: "courses",
@@ -24,7 +26,7 @@ module.exports = {
             return;
         }
 
-        const server = message.client.guilds.cache.get(DISCORD_SERVER_ID);
+        const server = message.client.guilds.cache.get(SERVER_ID);
 
         // Should be list, add, reset, etc.
         const subcommand = args[0].toLowerCase();
@@ -60,6 +62,10 @@ module.exports = {
                     {
                         id: server.id,
                         deny: ["VIEW_CHANNEL"]
+                    },
+                    {
+                        id: ADMIN_ROLE_ID,
+                        allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY"]
                     },
                     {
                         id: courseRole.id,
