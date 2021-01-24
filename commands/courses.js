@@ -49,6 +49,12 @@ module.exports = {
                 return message.reply("Please provide a course title or short title.");
             }
             const courseIdentifier = args[1];
+
+            const course = await findCourse(courseIdentifier);
+            if (!course) {
+                return message.reply("Course not found.");
+            }
+
             if (message.attachments.size === 0) {
                 return message.reply("Missing the attachment!");
             }
@@ -65,11 +71,18 @@ module.exports = {
             const foundRCSIDs = [];
             for (const email of emails) {
                 const rcsID = email.replace("@rpi.edu", "");
-                const user = await redis.get("users:" + rcsID.toUpperCase());
-                if (user) {
-                    messageLines.push(rcsID + " on server as " + user);
+                const discordUserId = await redis.get("discord_user_ids:" + rcsID.toUpperCase());
+                if (discordUserId) {
+                    // Find member
+                    const member = await server.members.fetch(discordUserId);
+                    if (member) {
+                        await member.roles.add(course.discordRoleId);
+                        messageLines.push(`${rcsID} on server as <@${discordUserId}>; added to course`);
+                    } else {
+                        messageLines.push(`${rcsID} WAS on server but is no longer`);
+                    }
                 } else {
-                    messageLines.push(rcsID + " not on server");
+                    messageLines.push(rcsID + " not on server yet");
                 }
             }
             message.channel.send(messageLines.join("\n"));
@@ -141,14 +154,7 @@ module.exports = {
             message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "remove") {
             const identifier = args[1];
-            const course = await Course.findOne({
-                where: {
-                    [Op.or]: [
-                        { title: identifier },
-                        { shortTitle: identifier }
-                    ]
-                }
-            });
+            const course = await findCourse(identifier);
 
             if (!course) {
                 return message.reply("Cannot find course.");
@@ -200,14 +206,7 @@ module.exports = {
             await course.destroy();
         } else if (subcommand === "add-team") {
             const [courseIdentifier, ...teamTitles] = args.slice(1);
-            const course = await Course.findOne({
-                where: {
-                    [Op.or]: [
-                        { title: courseIdentifier },
-                        { shortTitle: courseIdentifier }
-                    ]
-                }
-            });
+            const course = findCourse(courseIdentifier);
 
             if (!course) {
                 message.reply("Course not found!");
@@ -333,3 +332,16 @@ module.exports = {
         }
     }
 };
+
+
+async function findCourse(courseIdentifier) {
+    const course = await Course.findOne({
+        where: {
+            [Op.or]: [
+                { title: courseIdentifier },
+                { shortTitle: courseIdentifier }
+            ]
+        }
+    });
+    return course;
+}
