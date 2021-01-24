@@ -26,12 +26,9 @@ const Course = sequelize.define("Course", {
 });
 
 const CourseTeam = sequelize.define("CourseTeam", {
-    teamId: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
     title: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING,
+        allowNull: false
     },
     discordTextChannelId: {
         type: DataTypes.STRING
