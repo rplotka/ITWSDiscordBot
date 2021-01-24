@@ -7,6 +7,9 @@ const fs = require("fs");
 // Import Discord Node Module
 const Discord = require("discord.js");
 
+const { parseCommandAndArgs } = require("./utils");
+
+
 /** The prefix that commands use. */
 const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
@@ -67,8 +70,7 @@ bot.on("message", (message) => {
     // Divide input into parts
     // Command will be the first part and args will be the arguments
     // e.g. "!role ITWS" -> command="!role", args=["ITWS"]
-    const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
-	const commandName = args.shift().toLowerCase();
+    const [commandName, args] = parseCommandAndArgs(message.content.slice(commandPrefix.length));
 
     if (!bot.commands.has(commandName)) return;
 
