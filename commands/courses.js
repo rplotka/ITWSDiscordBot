@@ -206,7 +206,7 @@ module.exports = {
             await course.destroy();
         } else if (subcommand === "add-team") {
             const [courseIdentifier, ...teamTitles] = args.slice(1);
-            const course = findCourse(courseIdentifier);
+            const course = await findCourse(courseIdentifier);
 
             if (!course) {
                 message.reply("Course not found!");
