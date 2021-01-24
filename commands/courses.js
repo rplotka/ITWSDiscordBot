@@ -55,6 +55,7 @@ module.exports = {
                 return message.reply("Course not found.");
             }
 
+
             if (message.attachments.size === 0) {
                 return message.reply("Missing the attachment!");
             }
@@ -85,7 +86,7 @@ module.exports = {
                     messageLines.push(rcsID + " not on server yet");
                 }
             }
-            message.channel.send(messageLines.join("\n"));
+            await message.channel.send(messageLines.join("\n"), { split: true });
         } else if (subcommand === "add") {
             const [title, shortTitle] = args.slice(1);
             const newCourse = Course.build({
