@@ -6,12 +6,9 @@ dotenv.config()
 const Discord = require("discord.js");
 
 /** The prefix that commands use. */
-const commandPrefix = "!";
+const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
-const itwsServerId = "735867785879748709";
-
-/** ID of the Intro to ITWS category channel */
-const itwsCategoryId = "749708689212047490";
+const itwsServerId = process.env.DISCORD_SERVER_ID;
 
 // Define Roles with id's
 /** Role names matched to role IDs */
