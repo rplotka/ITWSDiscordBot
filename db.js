@@ -1,12 +1,88 @@
-const { Sequelize } = require("sequelize");
+const { Sequelize, DataTypes } = require("sequelize");
 
 const sequelize = new Sequelize(process.env.DATABASE_URL);
 
+const Course = sequelize.define("Course", {
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Full course title'
+    },
+    shortTitle: {
+        type: DataTypes.STRING,
+        comment: 'Abbreviated course title to use in Discord channel names'
+    },
+    instructors: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: [],
+        comment: 'RCS IDs of instructors'
+    },
+    discordCategoryId: {
+        type: DataTypes.STRING
+    },
+    discordRoleId: {
+        type: DataTypes.STRING
+    }
+});
+
+const CourseTeam = sequelize.define("CourseTeam", {
+    teamId: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    title: {
+        type: DataTypes.STRING
+    },
+    discordTextChannelId: {
+        type: DataTypes.STRING
+    },
+    discordVoiceChannelId: {
+        type: DataTypes.STRING
+    },
+    discordRoleId: {
+        type: DataTypes.STRING
+    }
+});
+
+const CourseEnrollment = sequelize.define("CourseEnrollment", {
+    studentRcsId: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
+});
+
+// Associations
+// https://sequelize.org/master/manual/assocs.html
+Course.hasMany(CourseEnrollment, {
+    foreignKey: {
+        allowNull: false
+    }
+});
+CourseEnrollment.belongsTo(Course);
+CourseEnrollment.belongsTo(CourseTeam);
+Course.hasMany(CourseTeam, {
+    foreignKey: {
+        allowNull: false
+    }
+});
+CourseTeam.belongsTo(Course);
+
+// Check the database connection, and then ensure the database and tables exist
 sequelize.authenticate()
     .then(() => {
-        console.log("Connected to Database.")
+        console.log("Connected to Database.");
+        return sequelize.sync({ alter: true });
+    })
+    .then(() => {
+        console.log("Synced Database.");
     })
     .catch((err) => {
         console.error(err);
         process.exit(1);
     });
+
+module.exports = {
+    Course,
+    CourseEnrollment,
+    CourseTeam
+};
