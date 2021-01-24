@@ -63,7 +63,7 @@ bot.once("ready", async () => {
     // // console.log(roles);
 });
 
-bot.on("message", (message) => {
+bot.on("message", async (message) => {
     // Ignore non-commands and bot messages
     if (!message.content.startsWith(commandPrefix) || message.author.bot) return;
 
@@ -80,13 +80,13 @@ bot.on("message", (message) => {
         
         // Command checks
         if (command.serverOnly && message.channel.type === "dm") {
-            return message.reply("Must use the command in a server!");
+            return await message.reply("Must use the command in a server!");
         }
         if (command.adminOnly && !message.member.roles.cache.find(r => r.id === adminRoleId)) {
-            return message.reply("Must be an admin to use!");
+            return await message.reply("Must be an admin to use!");
         }
 
-        command.execute(message, args);
+        await command.execute(message, args);
     } catch (error) {
         console.error(error);
         message.reply('Oops! Something went wrong running that command... Please let a Moderator know.');

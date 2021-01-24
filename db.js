@@ -62,6 +62,11 @@ const Group = sequelize.define("Group", {
         allowNull: false,
         comment: "Shorthand title like DnD for channel and role names"
     },
+    isPublic: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     discordOwnerUserId: {
         type: DataTypes.STRING,
         comment: 'ID of user that can manage this group'
