@@ -12,6 +12,8 @@ const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
 const itwsServerId = process.env.DISCORD_SERVER_ID;
 
+const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
+
 // Define Roles with id's
 /** Role names matched to role IDs */
 const roles = {};
@@ -73,9 +75,15 @@ bot.on("message", (message) => {
     // Attempt to run command
     try {
         const command = bot.commands.get(commandName);
-        if (command.serverOnly && message.channel.type === 'dm') {
-            return message.reply('Must use the command in a server!');
+        
+        // Command checks
+        if (command.serverOnly && message.channel.type === "dm") {
+            return message.reply("Must use the command in a server!");
         }
+        if (command.adminOnly && !message.member.roles.cache.find(r => r.id === adminRoleId)) {
+            return message.reply("Must be an admin to use!");
+        }
+
         command.execute(message, args);
     } catch (error) {
         console.error(error);

@@ -1,7 +1,6 @@
 module.exports = {
     name: 'help',
     description: 'General command help.',
-    serverOnly: false,
     usages: {
         'help': 'List all available commands',
         'help <command name>': 'Show detailed usage of specific command',
