@@ -48,9 +48,9 @@ bot.once("ready", async () => {
 
     // roles['Graduate'] = getRoleByName('Graduate').id;
 
-    // for (let team = 1; team <= 19; team++) {
-    //     roles['Team' + team] = getRoleByName('Intro Team ' + team).id;
-    // }
+    // // for (let team = 1; team <= 19; team++) {
+    // //     roles['Team' + team] = getRoleByName('Intro Team ' + team).id;
+    // // }
 
     // roles['Capstone'] = getRoleByName('Capstone').id;
     // for (let team = 1; team <= 6; team++) {

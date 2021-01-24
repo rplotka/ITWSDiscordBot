@@ -1,10 +1,12 @@
 const fetch = require("node-fetch");
+const Redis = require("ioredis");
 const { Op } = require("sequelize");
 const { Course, CourseEnrollment, CourseTeam } = require("../db");
 
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 const ADMIN_ROLE_ID = process.env.DISCORD_ADMIN_ROLE_ID;
 
+const redis = new Redis(process.env.REDIS_URL);
 
 module.exports = {
     name: "courses",
@@ -13,7 +15,9 @@ module.exports = {
     // adminOnly: true,
     usages: {
         "courses list": "List courses",
-        "courses add <title> <short title> <number of teams>": "Create a course and a category...",
+        "courses add <title> <short title> ": "Create a course category, general channels, and role.",
+        "courses add-team <course> <team title> ": "Create a team for a course with a role and private voice + text channels.",
+        "courses remove-team <course> <team title> ": "Remove a team for a course with its role and private voice + text channels.",
         "courses reset <title/short title>": "Wipe the course channels\"s messages and remove access from students.",
         "courses remove <title/short title>": "Delete the course category, role, and all channels."
     },
@@ -41,25 +45,36 @@ module.exports = {
             ];
             message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "sync") {
+            if (args.length < 2) {
+                return message.reply("Please provide a course title or short title.");
+            }
+            const courseIdentifier = args[1];
             if (message.attachments.size === 0) {
                 return message.reply("Missing the attachment!");
             }
             const attachment = message.attachments.first();
-            
+
             // Download attachment
             const response = await fetch(attachment.url);
             const text = await response.text();
             const emails = text.split(',');
 
+            const messageLines = [];
             // Find Discord account of users
             const notFoundRCSIDs = [];
             const foundRCSIDs = [];
             for (const email of emails) {
                 const rcsID = email.replace("@rpi.edu", "");
+                const user = await redis.get("users:" + rcsID.toUpperCase());
+                if (user) {
+                    messageLines.push(rcsID + " on server as " + user);
+                } else {
+                    messageLines.push(rcsID + " not on server");
+                }
             }
-
+            message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "add") {
-            const [title, shortTitle, teamCount] = args.slice(1);
+            const [title, shortTitle] = args.slice(1);
             const newCourse = Course.build({
                 title,
                 shortTitle
@@ -119,78 +134,11 @@ module.exports = {
 
             await newCourse.save();
 
-            // Teams
-            //  - role
-            //  - text channel
-            //  - voice channel
-
-            for (let teamNumber = 1; teamNumber <= teamCount; teamNumber++) {
-                // DB record
-                const courseTeam = CourseTeam.build({
-                    CourseId: newCourse.id,
-                    teamId: teamNumber
-                });
-
-                // Role
-                const teamRole = await server.roles.create({
-                    data: {
-                        name: `${newCourse.shortTitle} Team ${teamNumber}`
-                    },
-                    reason: `Team role for new course ${newCourse.title}, team ${teamNumber}`
-                });
-                courseTeam.discordRoleId = teamRole.id;
-
-                // Text channel
-                const teamTextChannel = await server.channels.create(`team-${teamNumber}`, {
-                    type: "text",
-                    parent: courseCategory.id,
-                    topic: `🔒 Private discussion channel for **Team ${teamNumber}** in **${newCourse.title}**.`,
-                    permissionOverwrites: [
-                        {
-                            id: server.id,
-                            deny: ["VIEW_CHANNEL"]
-                        },
-                        {
-                            id: courseRole.id,
-                            deny: ["VIEW_CHANNEL"]
-                        },
-                        {
-                            id: teamRole.id,
-                            allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY"]
-                        }
-                    ]
-                });
-                courseTeam.discordTextChannelId = teamTextChannel.id;
-
-                // Voice channel
-                const teamVoiceChannel = await server.channels.create(`Team ${teamNumber}`, {
-                    type: "voice",
-                    parent: courseCategory.id,
-                    permissionOverwrites: [
-                        {
-                            id: server.id,
-                            deny: ["VIEW_CHANNEL"]
-                        },
-                        {
-                            id: courseRole.id,
-                            deny: ["VIEW_CHANNEL"]
-                        },
-                        {
-                            id: teamRole.id,
-                            allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"]
-                        }
-                    ]
-                });
-                courseTeam.discordVoiceChannelId = teamVoiceChannel.id;
-
-                await courseTeam.save();
-            }
-
             const messageLines = [
                 `**Created course ${newCourse.title} (${newCourse.shortTitle})**`,
                 `Go into the settings of ${courseAnnouncementsChannel} to turn it into a real Announcements channel.`
             ];
-            message.reply(messageLines.join("\n"));
+            message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "remove") {
             const identifier = args[1];
             const course = await Course.findOne({
@@ -250,6 +198,138 @@ module.exports = {
 
             // Delete DB record
             await course.destroy();
+        } else if (subcommand === "add-team") {
+            const [courseIdentifier, ...teamTitles] = args.slice(1);
+            const course = await Course.findOne({
+                where: {
+                    [Op.or]: [
+                        { title: courseIdentifier },
+                        { shortTitle: courseIdentifier }
+                    ]
+                }
+            });
+
+            if (!course) {
+                message.reply("Course not found!");
+                return;
+            }
+
+            for (const teamTitle of teamTitles) {
+                // Ensure team doesn't already exist
+                const existingTeam = await CourseTeam.findOne({
+                    where: {
+                        CourseId: course.id,
+                        title: teamTitle
+                    }
+                });
+                if (existingTeam) {
+                    await message.reply(`\`Team ${teamTitle}\` already exists for this course!`);
+                    continue;
+                }
+    
+                // DB record
+                const courseTeam = CourseTeam.build({
+                    CourseId: course.id,
+                    title: teamTitle
+                });
+    
+                // Role
+                const teamRole = await server.roles.create({
+                    data: {
+                        name: `${course.shortTitle} Team ${teamTitle}`
+                    },
+                    reason: `Team role for new course ${course.title}, team ${teamTitle}`
+                });
+                courseTeam.discordRoleId = teamRole.id;
+    
+                // Text channel
+                const teamTextChannel = await server.channels.create(`team-${teamTitle}`, {
+                    type: "text",
+                    parent: course.discordCategoryId,
+                    topic: `🔒 Private discussion channel for **Team ${teamTitle}** in **${course.title}**.`,
+                    permissionOverwrites: [
+                        {
+                            id: server.id,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: course.discordRoleId,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: teamRole.id,
+                            allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY"]
+                        }
+                    ]
+                });
+                courseTeam.discordTextChannelId = teamTextChannel.id;
+    
+                // Voice channel
+                const teamVoiceChannel = await server.channels.create(`Team ${teamTitle}`, {
+                    type: "voice",
+                    parent: course.discordCategoryId,
+                    permissionOverwrites: [
+                        {
+                            id: server.id,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: course.discordRoleId,
+                            deny: ["VIEW_CHANNEL"]
+                        },
+                        {
+                            id: teamRole.id,
+                            allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"]
+                        }
+                    ]
+                });
+                courseTeam.discordVoiceChannelId = teamVoiceChannel.id;
+                
+                await courseTeam.save();
+                await message.channel.send(`Created Team ${teamTitle} role and channels.`);
+            }
+
+            await message.channel.send("Added teams!");
+        } else if (subcommand === "remove-team") {
+            const [courseIdentifier, ...teamTitles] = args.slice(1);
+            const course = await Course.findOne({
+                where: {
+                    [Op.or]: [
+                        { title: courseIdentifier },
+                        { shortTitle: courseIdentifier }
+                    ]
+                }
+            });
+
+            if (!course) {
+                message.reply("Course not found!");
+                return;
+            }
+
+            // Delete team roles and channels
+            const courseTeams = await CourseTeam.findAll({
+                where: {
+                    CourseId: course.id,
+                    title: teamTitles
+                }
+            });
+            for (const courseTeam of courseTeams) {
+                // Delete role
+                const courseRole = await server.roles.fetch(courseTeam.discordRoleId)
+                await courseRole.delete("Course being removed");
+
+                // Delete text channel
+                const teamTextChannel = server.channels.cache.get(courseTeam.discordTextChannelId);
+                await teamTextChannel.delete("Course being removed");
+
+                // Delete voice channel
+                const teamVoiceChannel = server.channels.cache.get(courseTeam.discordVoiceChannelId);
+                await teamVoiceChannel.delete("Course being removed");
+
+                await courseTeam.destroy();
+            }
+
+            await message.channel.send("Removed teams.");
         }
     }
 };
