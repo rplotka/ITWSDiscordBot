@@ -15,7 +15,13 @@ module.exports = {
     ],
     async execute(message, args) {
         if (args.length === 0) {
-            return message.reply("Please provide a course title or short title.");
+            const courses = await Course.findAll();
+            const messageLines = [
+                "**Available Courses**",
+                ...courses.map(c => `${c.title} \`(${c.shortTitle})\``)
+            ];
+            message.channel.send(messageLines.join("\n"), { split: true });
+            return;
         }
         const courseIdentifier = args[0];
 
@@ -27,6 +33,7 @@ module.exports = {
         try {
             await message.member.roles.add(course.discordRoleId);
             await message.reply('Added role!');
+            // await message.guild.channels.cache.get(course.)
         } catch (e) {
             await message.reply('Failed to add role...');
         }
