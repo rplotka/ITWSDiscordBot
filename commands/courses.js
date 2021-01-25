@@ -12,7 +12,7 @@ module.exports = {
     name: "courses",
     description: "Manage courses with their categories, channels, and roles.",
     serverOnly: true,
-    adminOnly: true,
+    // adminOnly: true,
     usages: {
         "courses list": "List courses",
         "courses add <title> <short title> ": "Create a course category, general channels, and role.",
@@ -346,3 +346,5 @@ async function findCourse(courseIdentifier) {
     });
     return course;
 }
+
+module.exports.findCourse = findCourse;
