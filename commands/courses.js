@@ -12,7 +12,7 @@ module.exports = {
     name: "courses",
     description: "Manage courses with their categories, channels, and roles.",
     serverOnly: true,
-    // adminOnly: true,
+    adminOnly: true,
     usages: {
         "courses list": "List courses",
         "courses add <title> <short title> ": "Create a course category, general channels, and role.",
@@ -226,13 +226,13 @@ module.exports = {
                     await message.reply(`\`Team ${teamTitle}\` already exists for this course!`);
                     continue;
                 }
-    
+
                 // DB record
                 const courseTeam = CourseTeam.build({
                     CourseId: course.id,
                     title: teamTitle
                 });
-    
+
                 // Role
                 const teamRole = await server.roles.create({
                     data: {
@@ -241,7 +241,7 @@ module.exports = {
                     reason: `Team role for new course ${course.title}, team ${teamTitle}`
                 });
                 courseTeam.discordRoleId = teamRole.id;
-    
+
                 // Text channel
                 const teamTextChannel = await server.channels.create(`team-${teamTitle}`, {
                     type: "text",
@@ -263,7 +263,7 @@ module.exports = {
                     ]
                 });
                 courseTeam.discordTextChannelId = teamTextChannel.id;
-    
+
                 // Voice channel
                 const teamVoiceChannel = await server.channels.create(`Team ${teamTitle}`, {
                     type: "voice",
@@ -284,7 +284,7 @@ module.exports = {
                     ]
                 });
                 courseTeam.discordVoiceChannelId = teamVoiceChannel.id;
-                
+
                 await courseTeam.save();
                 await message.channel.send(`Created Team ${teamTitle} role and channels.`);
             }
@@ -339,8 +339,16 @@ async function findCourse(courseIdentifier) {
     const course = await Course.findOne({
         where: {
             [Op.or]: [
-                { title: courseIdentifier },
-                { shortTitle: courseIdentifier }
+                {
+                    title: {
+                        [Op.iLike]: courseIdentifier
+                    }
+                },
+                {
+                    shortTitle: {
+                        [Op.iLike]: courseIdentifier
+                    }
+                }
             ]
         }
     });
