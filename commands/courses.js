@@ -77,8 +77,14 @@ module.exports = {
                     // Find member
                     const member = await server.members.fetch(discordUserId);
                     if (member) {
-                        await member.roles.add(course.discordRoleId);
-                        messageLines.push(`${rcsID} on server as <@${discordUserId}>; added to course`);
+                        if (member.roles.cache.has(course.discordRoleId)) {
+                            messageLines.push(`${rcsID} on server as <@${discordUserId}>; already added to course`);
+                        } else {
+                            await member.roles.add(course.discordRoleId);
+                            const courseGeneralChannel = await findCourseGeneralChannel(message.guild, course);
+                            await courseGeneralChannel.send(`Welcome <@${discordUserId}>!`);
+                            messageLines.push(`${rcsID} on server as <@${discordUserId}>; added to course`);
+                        }
                     } else {
                         messageLines.push(`${rcsID} WAS on server but is no longer`);
                     }
@@ -226,13 +232,13 @@ module.exports = {
                     await message.reply(`\`Team ${teamTitle}\` already exists for this course!`);
                     continue;
                 }
-    
+
                 // DB record
                 const courseTeam = CourseTeam.build({
                     CourseId: course.id,
                     title: teamTitle
                 });
-    
+
                 // Role
                 const teamRole = await server.roles.create({
                     data: {
@@ -241,7 +247,7 @@ module.exports = {
                     reason: `Team role for new course ${course.title}, team ${teamTitle}`
                 });
                 courseTeam.discordRoleId = teamRole.id;
-    
+
                 // Text channel
                 const teamTextChannel = await server.channels.create(`team-${teamTitle}`, {
                     type: "text",
@@ -263,7 +269,7 @@ module.exports = {
                     ]
                 });
                 courseTeam.discordTextChannelId = teamTextChannel.id;
-    
+
                 // Voice channel
                 const teamVoiceChannel = await server.channels.create(`Team ${teamTitle}`, {
                     type: "voice",
@@ -284,7 +290,7 @@ module.exports = {
                     ]
                 });
                 courseTeam.discordVoiceChannelId = teamVoiceChannel.id;
-                
+
                 await courseTeam.save();
                 await message.channel.send(`Created Team ${teamTitle} role and channels.`);
             }
@@ -339,10 +345,26 @@ async function findCourse(courseIdentifier) {
     const course = await Course.findOne({
         where: {
             [Op.or]: [
-                { title: courseIdentifier },
-                { shortTitle: courseIdentifier }
+                {
+                    title: {
+                        [Op.iLike]: courseIdentifier
+                    }
+                },
+                {
+                    shortTitle: {
+                        [Op.iLike]: courseIdentifier
+                    }
+                }
             ]
         }
     });
     return course;
 }
+
+async function findCourseGeneralChannel(server, course) {
+    const courseCategory = await server.channels.cache.get(course.discordCategoryId);
+    return courseCategory.children.find(child => child.name === "general");
+}
+
+module.exports.findCourse = findCourse;
+module.exports.findCourseGeneralChannel = findCourseGeneralChannel;
