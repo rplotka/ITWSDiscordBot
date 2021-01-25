@@ -77,8 +77,14 @@ module.exports = {
                     // Find member
                     const member = await server.members.fetch(discordUserId);
                     if (member) {
-                        await member.roles.add(course.discordRoleId);
-                        messageLines.push(`${rcsID} on server as <@${discordUserId}>; added to course`);
+                        if (member.roles.cache.has(course.discordRoleId)) {
+                            messageLines.push(`${rcsID} on server as <@${discordUserId}>; already added to course`);
+                        } else {
+                            await member.roles.add(course.discordRoleId);
+                            const courseGeneralChannel = await findCourseGeneralChannel(message.guild, course);
+                            await courseGeneralChannel.send(`Welcome <@${discordUserId}>!`);
+                            messageLines.push(`${rcsID} on server as <@${discordUserId}>; added to course`);
+                        }
                     } else {
                         messageLines.push(`${rcsID} WAS on server but is no longer`);
                     }
@@ -355,4 +361,10 @@ async function findCourse(courseIdentifier) {
     return course;
 }
 
+async function findCourseGeneralChannel(server, course) {
+    const courseCategory = await server.channels.cache.get(course.discordCategoryId);
+    return courseCategory.children.find(child => child.name === "general");
+}
+
 module.exports.findCourse = findCourse;
+module.exports.findCourseGeneralChannel = findCourseGeneralChannel;

@@ -1,5 +1,5 @@
 const { Course } = require("../db");
-const { findCourse } = require('./courses');
+const { findCourse, findCourseGeneralChannel } = require('./courses');
 
 module.exports = {
     name: "join",
@@ -33,9 +33,17 @@ module.exports = {
         try {
             await message.member.roles.add(course.discordRoleId);
             await message.reply('Added role!');
-            // await message.guild.channels.cache.get(course.)
+            
         } catch (e) {
             await message.reply('Failed to add role...');
+        }
+
+        try {
+            const courseGeneralChannel = await findCourseGeneralChannel(message.guild, course)
+            await courseGeneralChannel.send(`Welcome <@${message.author.id}>!`);
+        } catch (e) {
+            console.error("Failed to send welcome message.");
+            console.error(e);
         }
     }
 };
