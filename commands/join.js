@@ -1,5 +1,6 @@
-const { Course } = require("../db");
+const { Course, CourseTeam } = require("../db");
 const { findCourse, findCourseGeneralChannel } = require('./courses');
+const { Op } = require("sequelize");
 
 module.exports = {
     name: "join",
@@ -7,11 +8,14 @@ module.exports = {
     serverOnly: true,
     usages: {
         "join <course title/short title>": "Join a course",
+        "join <course title/short title> <team name/number>": "Join a course and team",
     },
     examples: [
         "join Intro",
+        "join Intro 2",
+        "join intro \"Team 3\"",
         "join Capstone",
-        "join MITRe",
+        "join MITRe 7",
     ],
     async execute(message, args) {
         if (args.length === 0) {
@@ -36,6 +40,7 @@ module.exports = {
             
         } catch (e) {
             await message.reply('Failed to add role...');
+            return;
         }
 
         try {
@@ -44,6 +49,37 @@ module.exports = {
         } catch (e) {
             console.error("Failed to send welcome message.");
             console.error(e);
+        }
+
+        if (args.length === 2) {
+            // Join team as well
+            // Find team
+            const teamIdentifier = args[1].toLowerCase().replace("team", "").trim();
+            const courseTeam = await CourseTeam.findOne({
+                where: {
+                    CourseId: course.id,
+                    title: {
+                        [Op.iLike]: teamIdentifier
+                    }
+                }
+            });
+
+            if (!courseTeam) {
+                return await message.reply("No such team!");
+            }
+
+            try {
+                if (message.member.roles.cache.has(courseTeam.discordRoleId)) {
+                    await message.reply("You're already in that team!");
+                } else {
+                    await message.member.roles.add(courseTeam.discordRoleId);
+                    // Send welcome message
+                    const channel = message.guild.channels.cache.get(courseTeam.discordTextChannelId);
+                    await channel.send(`Welcome <@${message.author.id}>!`);
+                }
+            } catch (error) {
+                await message.reply("Failed to add team role...");
+            }
         }
     }
 };
