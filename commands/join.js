@@ -7,21 +7,25 @@ module.exports = {
     description: "Join courses",
     serverOnly: true,
     usages: {
-        "join <course title/short title>": "Join a course",
-        "join <course title/short title> <team name/number>": "Join a course and team",
+        "join <course title/short title>": "Join a *public* course.",
+        "join <course title/short title> <team name/number>": "Join a course and team. If course is not public, you must've been added to it already.",
     },
     examples: [
         "join Intro",
         "join Intro 2",
         "join intro \"Team 3\"",
         "join Capstone",
-        "join MITRe 7",
+        "join MITR 7",
     ],
     async execute(message, args) {
         if (args.length === 0) {
-            const courses = await Course.findAll();
+            const courses = await Course.findAll({
+                where: {
+                    isPublic: true
+                }
+            });
             const messageLines = [
-                "**Available Courses**",
+                "**Available Public Courses**",
                 ...courses.map(c => `${c.title} \`(${c.shortTitle})\``)
             ];
             message.channel.send(messageLines.join("\n"), { split: true });
@@ -31,7 +35,11 @@ module.exports = {
 
         const course = await findCourse(courseIdentifier);
         if (!course) {
-            return message.reply("Course not found.");
+            return await message.reply("Course not found.");
+        }
+
+        if (!course.isPublic) {
+            return await message.reply("You can only be added to that course by the instructor.");
         }
 
         try {

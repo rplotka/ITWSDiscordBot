@@ -14,6 +14,12 @@ const Course = sequelize.define("Course", {
         type: DataTypes.STRING,
         comment: 'Abbreviated course title to use in Discord channel names'
     },
+    isPublic: {
+        type: DataTypes.BOOLEAN,
+        comment: 'Whether students can join on their own',
+        allowNull: false,
+        defaultValue: true
+    },
     instructors: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [],

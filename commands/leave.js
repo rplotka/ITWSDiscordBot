@@ -11,7 +11,7 @@ module.exports = {
     examples: [
         "leave Intro",
         "leave Capstone",
-        "leave MITRe",
+        "leave MITR",
     ],
     async execute(message, args) {
         if (args.length === 0) {
