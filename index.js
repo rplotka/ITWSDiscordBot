@@ -8,14 +8,12 @@ const fs = require("fs");
 const Discord = require("discord.js");
 
 const { parseCommandAndArgs } = require("./utils");
-
+const { NotAuthorized } = require("./permissions");
 
 /** The prefix that commands use. */
 const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
 const itwsServerId = process.env.DISCORD_SERVER_ID;
-
-const adminRoleId = process.env.DISCORD_ADMIN_ROLE_ID;
 
 // Define Roles with id's
 /** Role names matched to role IDs */
@@ -85,19 +83,20 @@ bot.on("message", async (message) => {
     // Attempt to run command
     try {
         const command = bot.commands.get(commandName);
-        
+
         // Command checks
         if (command.serverOnly && message.channel.type === "dm") {
             return await message.reply("Must use the command in a server!");
-        }
-        if (command.adminOnly && !message.member.roles.cache.find(r => r.id === adminRoleId)) {
-            return await message.reply("Must be an admin to use!");
         }
 
         await command.execute(message, args);
     } catch (error) {
         console.error(error);
-        message.reply('Oops! Something went wrong running that command... Please let a Moderator know.');
+        if (error instanceof NotAuthorized) {
+            await message.reply(error.message || "You do not have permission to run that command.");
+        } else {
+            await message.reply('Oops! Something went wrong running that command... Please let a Moderator know.');
+        }
     }
 });
 
