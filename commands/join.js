@@ -5,7 +5,6 @@ const { Op } = require("sequelize");
 module.exports = {
     name: "join",
     description: "Join courses",
-    serverOnly: true,
     usages: {
         "join <course title/short title>": "Join a *public* course.",
         "join <course title/short title> <team name/number>": "Join a course and team. If course is not public, you must've been added to it already.",
@@ -17,7 +16,7 @@ module.exports = {
         "join Capstone",
         "join MITR 7",
     ],
-    async execute(message, args) {
+    async execute(message, member, args) {
         if (args.length === 0) {
             const courses = await Course.findAll({
                 where: {
@@ -45,14 +44,13 @@ module.exports = {
         try {
             await message.member.roles.add(course.discordRoleId);
             await message.reply('Added role!');
-            
         } catch (e) {
             await message.reply('Failed to add role...');
             return;
         }
 
         try {
-            const courseGeneralChannel = await findCourseGeneralChannel(message.guild, course)
+            const courseGeneralChannel = await findCourseGeneralChannel(message.guild, course);
             await courseGeneralChannel.send(`Welcome <@${message.author.id}>!`);
         } catch (e) {
             console.error("Failed to send welcome message.");

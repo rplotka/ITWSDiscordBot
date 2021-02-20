@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const { Group } = require("../db");
 const { isModeratorOrAbove } = require("../permissions");
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
@@ -5,28 +6,27 @@ const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
 module.exports = {
     name: "groups",
+    alias: "role",
     description: "User groups.",
-    serverOnly: false,
     usages: {
-        "groups join <group name/short name/id>": "Join a group",
-        "groups leave <group name/short name/id>": "Leave a group",
-        "groups add <group name> <short name> [category name] [public?]": "(Admin) Create a group in a specific category",
-        "groups reset <group name/short name/id>": "(Admin) Remove all members from a group",
-        "groups remove <group name/short name/id>": "(Admin) Delete a group and its channels",
+        "groups \"<group title>\"": "Join/leave a group",
+        // "groups leave <group name/short name/id>": "Leave a group",
+        "groups add <group name> <short name> [public?]": "(Mods) Create a group in a specific category",
+        // "groups reset <group name/short name/id>": "(Admin) Remove all members from a group",
+        // "groups remove <group name/short name/id>": "(Admin) Delete a group and its channels",
     },
     examples: [
-        "groups join DnD",
-        'groups leave "Among Us"',
-        'groups add "Jackbox Party Pack" "Jackbox" "Games" yes',
-        'groups add "Secret Club" "secret" "Custom Category" no',
+        "groups DnD",
+        // 'groups leave "Among Us"',
+        'groups add "Jackbox Party Pack" Jackbox yes',
+        'groups add "Secret Club" secret no',
     ],
-    async execute(message, args) {
+    async execute(message, member, args) {
         const server = message.client.guilds.cache.get(SERVER_ID);
-
-        // Should be list, add, reset, etc.
-        const subcommand = args[0].toLowerCase();
+        const member = await server.members.fetch(message.author.id);
 
         if (args.length === 0) {
+            // List groups
             const groups = await Group.findAll();
             const messageLines = [
                 '**Public Groups**',
@@ -34,7 +34,34 @@ module.exports = {
                 `\nJoin a group with \`${commandPrefix}group "group name"\``
             ];
             return await message.channel.send(messageLines.join("\n"));
+        } else if (args.length === 1) {
+            // Join/leave group
+            const group = await findGroup(args[0]);
+            if (!group || !group.isPublic) {
+                return await message.reply("Group not found.");
+            }
+
+            if (!member.roles.cache.has(group.discordRoleId)) {
+                // Add group role
+                try {
+                    await member.roles.add(group.discordRoleId);
+                    await message.reply('Added group role!');
+                } catch (e) {
+                    return await message.reply('Failed to add group role. Please notify a Moderator.');
+                }
+            } else {
+                // Remove group role
+                try {
+                    await member.roles.remove(group.discordRoleId);
+                    await message.reply('Removed group role!');
+                } catch (e) {
+                    return await message.reply('Failed to remove group role. Please notify a Moderator.');
+                }
+            }
         }
+
+        // Should be add, remove, etc.
+        const subcommand = args[0].toLowerCase();
 
         if (subcommand === "add") {
             // Check permissions
@@ -90,3 +117,23 @@ module.exports = {
         // TODO: remove group subcommand
     }
 };
+
+async function findGroup(groupIdentifer) {
+    const group = await Group.findOne({
+        where: {
+            [Op.or]: [
+                {
+                    title: {
+                        [Op.iLike]: groupIdentifer
+                    }
+                },
+                {
+                    shortTitle: {
+                        [Op.iLike]: groupIdentifer
+                    }
+                }
+            ]
+        }
+    });
+    return group;
+}

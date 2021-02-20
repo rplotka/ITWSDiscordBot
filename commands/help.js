@@ -9,7 +9,7 @@ module.exports = {
         'help',
         'help courses',
     ],
-    execute(message, args) {
+    execute(message, member, args) {
         const commands = message.client.commands;
 
         if (args.length === 0) {

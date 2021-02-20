@@ -3,6 +3,7 @@ const Redis = require("ioredis");
 const { isModeratorOrAbove } = require("../permissions");
 const { Op } = require("sequelize");
 const { Course, CourseEnrollment, CourseTeam } = require("../db");
+const { fetchMember } = require("../utils");
 
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 const ADMIN_ROLE_ID = process.env.DISCORD_ADMIN_ROLE_ID;
@@ -12,7 +13,6 @@ const redis = new Redis(process.env.REDIS_URL);
 module.exports = {
     name: "courses",
     description: "Manage courses with their categories, channels, and roles.",
-    serverOnly: true,
     usages: {
         "courses list": "List courses",
         "courses add <title> <short title> ": "Create a course category, general channels, and role.",
@@ -26,7 +26,7 @@ module.exports = {
         'courses reset "Intro to ITWS"',
         'courses remove "Intro to ITWS"'
     ],
-    async execute(message, args) {
+    async execute(message, member, args) {
         if (args.length === 0) {
             return;
         }
@@ -45,7 +45,7 @@ module.exports = {
             ];
             message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "sync") {
-            await isModeratorOrAbove(message.author);
+            await isModeratorOrAbove(member);
 
             if (args.length < 2) {
                 return message.reply("Please provide a course title or short title.");
@@ -77,12 +77,12 @@ module.exports = {
                 const discordUserId = await redis.get("discord_user_ids:" + rcsID.toUpperCase());
                 if (discordUserId) {
                     // Find member
-                    const member = await server.members.fetch(discordUserId);
-                    if (member) {
-                        if (member.roles.cache.has(course.discordRoleId)) {
+                    const studentDiscordMember = await fetchMember(server, discordUserId);
+                    if (studentDiscordMember) {
+                        if (studentDiscordMember.roles.cache.has(course.discordRoleId)) {
                             messageLines.push(`${rcsID} on server as <@${discordUserId}>; already added to course`);
                         } else {
-                            await member.roles.add(course.discordRoleId);
+                            await studentDiscordMember.roles.add(course.discordRoleId);
                             const courseGeneralChannel = await findCourseGeneralChannel(message.guild, course);
                             await courseGeneralChannel.send(`Welcome <@${discordUserId}>!`);
                             messageLines.push(`${rcsID} on server as <@${discordUserId}>; added to course`);
@@ -96,7 +96,7 @@ module.exports = {
             }
             await message.channel.send(messageLines.join("\n"), { split: true });
         } else if (subcommand === "add") {
-            await isModeratorOrAbove(message.author);
+            await isModeratorOrAbove(member);
 
             const [title, shortTitle] = args.slice(1);
             const newCourse = Course.build({
@@ -164,7 +164,7 @@ module.exports = {
             ];
             message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "remove") {
-            await isModeratorOrAbove(message.author);
+            await isModeratorOrAbove(member);
 
             const identifier = args[1];
             const course = await findCourse(identifier);
@@ -218,7 +218,7 @@ module.exports = {
             // Delete DB record
             await course.destroy();
         } else if (subcommand === "add-team") {
-            await isModeratorOrAbove(message.author);
+            await isModeratorOrAbove(member);
 
             const [courseIdentifier, ...teamTitles] = args.slice(1);
             const course = await findCourse(courseIdentifier);
@@ -305,7 +305,7 @@ module.exports = {
 
             await message.channel.send("Added teams!");
         } else if (subcommand === "remove-team") {
-            await isModeratorOrAbove(message.author);
+            await isModeratorOrAbove(member);
 
             const [courseIdentifier, ...teamTitles] = args.slice(1);
             const course = await Course.findOne({

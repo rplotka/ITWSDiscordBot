@@ -24,6 +24,11 @@ function parseCommandAndArgs(line) {
     return [arguments[0].toLowerCase(), arguments.slice(1)];
 }
 
+function fetchMember(server, user) {
+    return server.members.fetch(user.id);
+}
+
 module.exports = {
-    parseCommandAndArgs
+    parseCommandAndArgs,
+    fetchMember
 };

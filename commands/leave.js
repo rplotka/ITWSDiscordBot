@@ -4,7 +4,6 @@ const { findCourse } = require('./courses');
 module.exports = {
     name: "leave",
     description: "Leave courses",
-    serverOnly: true,
     usages: {
         "leave <course title/short title>": "Leave a course",
     },
@@ -13,7 +12,7 @@ module.exports = {
         "leave Capstone",
         "leave MITR",
     ],
-    async execute(message, args) {
+    async execute(message, member, args) {
         if (args.length === 0) {
             const courses = await Course.findAll();
             const messageLines = [
