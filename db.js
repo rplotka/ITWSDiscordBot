@@ -8,22 +8,22 @@ const Course = sequelize.define("Course", {
     title: {
         type: DataTypes.STRING,
         allowNull: false,
-        comment: 'Full course title'
+        comment: "Full course title"
     },
     shortTitle: {
         type: DataTypes.STRING,
-        comment: 'Abbreviated course title to use in Discord channel names'
+        comment: "Abbreviated course title to use in Discord channel names"
     },
     isPublic: {
         type: DataTypes.BOOLEAN,
-        comment: 'Whether students can join on their own',
+        comment: "Whether students can join on their own",
         allowNull: false,
         defaultValue: true
     },
     instructors: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: [],
-        comment: 'RCS IDs of instructors'
+        comment: "RCS IDs of instructors"
     },
     discordCategoryId: {
         type: DataTypes.STRING
@@ -74,16 +74,12 @@ const Group = sequelize.define("Group", {
     },
     discordOwnerUserId: {
         type: DataTypes.STRING,
-        comment: 'ID of user that can manage this group'
+        comment: "ID of user that can manage this group"
     },
     discordRoleId: {
-        type: DataTypes.STRING
-    },
-    discordTextChannelId: {
-        type: DataTypes.STRING
-    },
-    discordVoiceChannelId: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: "ID of Discord role that this group owns and grants to members"
     }
 });
 
