@@ -24,11 +24,38 @@ function parseCommandAndArgs(lineRaw) {
   return [args[0].toLowerCase(), args.slice(1)];
 }
 
-function fetchMember(server, user) {
-  return server.members.fetch(user.id);
+/**
+ * Attempts to fetch a member from a server
+ * from their Discord user ID. Will only work if the
+ * user is on the server.
+ *
+ * @param {*} server
+ * @param {*} userId
+ */
+function fetchMemberById(server, userId) {
+  return server.members.fetch(userId);
+}
+
+/**
+ * Attempts to toggle a specific role on a server member.
+ *
+ * @param member Discord server member
+ * @param role Role ID or object
+ * @returns boolean Whether the role was added (true) or removed (false)
+ */
+async function toggleMemberRole(member, roleOrRoleId) {
+  // Remove
+  if (member.roles.cache.has(roleOrRoleId)) {
+    await member.roles.remove(roleOrRoleId);
+    return false;
+  }
+  // Add
+  await member.roles.add(roleOrRoleId);
+  return true;
 }
 
 module.exports = {
   parseCommandAndArgs,
-  fetchMember,
+  fetchMemberById,
+  toggleMemberRole,
 };

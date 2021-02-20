@@ -1,8 +1,8 @@
 const { Op } = require('sequelize');
 const { Group } = require('../db');
 const { isModeratorOrAbove } = require('../permissions');
+const { toggleMemberRole } = require('../utils');
 
-const SERVER_ID = process.env.DISCORD_SERVER_ID;
 const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
 async function findGroup(groupIdentifer) {
@@ -44,7 +44,7 @@ module.exports = {
     'groups add "Secret Club" secret no',
   ],
   async execute(message, member, args) {
-    const server = message.client.guilds.cache.get(SERVER_ID);
+    const server = member.guild;
 
     if (args.length === 0) {
       // List groups
@@ -65,28 +65,17 @@ module.exports = {
         return;
       }
 
-      if (!member.roles.cache.has(group.discordRoleId)) {
-        // Add group role
-        try {
-          await member.roles.add(group.discordRoleId);
-          await message.reply('Added group role!');
-        } catch (e) {
-          await message.reply(
-            'Failed to add group role. Please notify a Moderator.'
-          );
-          return;
-        }
-      } else {
-        // Remove group role
-        try {
-          await member.roles.remove(group.discordRoleId);
-          await message.reply('Removed group role!');
-        } catch (e) {
-          await message.reply(
-            'Failed to remove group role. Please notify a Moderator.'
-          );
-          return;
-        }
+      try {
+        const added = await toggleMemberRole(member, group.discordRoleId);
+        await message.reply(
+          added ? 'Added group role!' : 'Removed group role!'
+        );
+      } catch (error) {
+        console.error(error);
+        await message.reply(
+          'Failed to toggle group role. Please notify a Moderator.'
+        );
+        return;
       }
     }
 
