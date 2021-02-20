@@ -3,9 +3,9 @@
 const fetch = require('node-fetch');
 const Redis = require('ioredis');
 const { Op } = require('sequelize');
-const { isModeratorOrAbove } = require('../permissions');
-const { Course, CourseTeam } = require('../db');
-const { fetchMember } = require('../utils');
+const { isModeratorOrAbove } = require('../core/permissions');
+const { Course, CourseTeam } = require('../core/db');
+const { fetchMember } = require('../core/utils');
 
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 const ADMIN_ROLE_ID = process.env.DISCORD_ADMIN_ROLE_ID;

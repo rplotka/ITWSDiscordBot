@@ -1,4 +1,4 @@
-const { Course } = require('../db');
+const { Course } = require('../core/db');
 const { findCourse } = require('./courses');
 
 module.exports = {

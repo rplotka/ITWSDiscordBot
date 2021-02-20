@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes } = require('sequelize');
+const logger = require('./logging').child({ from: 'db' });
 
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   logging: false,
@@ -103,14 +104,14 @@ CourseTeam.belongsTo(Course);
 sequelize
   .authenticate()
   .then(() => {
-    console.log('Connected to Database.');
+    logger.info('Connected to Database.');
     return sequelize.sync({ alter: true });
   })
   .then(() => {
-    console.log('Synced Database.');
+    logger.info('Synced Database.');
   })
   .catch((err) => {
-    console.error(err);
+    logger.error(err);
     process.exit(1);
   });
 

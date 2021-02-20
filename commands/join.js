@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
-const { Course, CourseTeam } = require('../db');
+const logger = require('../core/logging').child({ from: 'join' });
+const { Course, CourseTeam } = require('../core/db');
 const { findCourse, findCourseGeneralChannel } = require('./courses');
 
 module.exports = {
@@ -61,8 +62,8 @@ module.exports = {
       );
       await courseGeneralChannel.send(`Welcome <@${message.author.id}>!`);
     } catch (e) {
-      console.error('Failed to send welcome message.');
-      console.error(e);
+      logger.error('Failed to send welcome message.');
+      logger.error(e);
     }
 
     if (args.length === 2) {
@@ -96,6 +97,7 @@ module.exports = {
         }
       } catch (error) {
         await message.reply('Failed to add team role...');
+        logger.error(error);
       }
     }
   },

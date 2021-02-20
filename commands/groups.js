@@ -1,7 +1,8 @@
 const { Op } = require('sequelize');
-const { Group } = require('../db');
-const { isModeratorOrAbove } = require('../permissions');
-const { toggleMemberRole } = require('../utils');
+const logger = require('../core/logging').child({ from: 'groups' });
+const { Group } = require('../core/db');
+const { isModeratorOrAbove } = require('../core/permissions');
+const { toggleMemberRole } = require('../core/utils');
 
 const commandPrefix = process.env.DISCORD_COMMAND_PREFIX;
 
@@ -71,7 +72,7 @@ module.exports = {
           added ? 'Added group role!' : 'Removed group role!'
         );
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         await message.reply(
           'Failed to toggle group role. Please notify a Moderator.'
         );
@@ -123,7 +124,7 @@ module.exports = {
           reason: 'New group',
         });
       } catch (error) {
-        console.error(
+        logger.error(
           `Failed to create group role for new group ${groupShortTitle}: ${error}`
         );
         await message.channel.send(
@@ -141,7 +142,7 @@ module.exports = {
             isPublicRaw.trim() === 'yes' || isPublicRaw.trim() === 'true',
           discordRoleId: groupDiscordRole.id,
         });
-        console.log(
+        logger.info(
           `Created new ${
             newGroup.isPublic ? 'public' : 'private'
           } group ${groupTitle} (${groupShortTitle})`
@@ -151,7 +152,7 @@ module.exports = {
         );
         return;
       } catch (error) {
-        console.log(`Failed to create new group ${groupShortTitle}: ${error}`);
+        logger.info(`Failed to create new group ${groupShortTitle}: ${error}`);
         await message.channel.send(
           'Failed to create group. Check bot logs for more information.'
         );
