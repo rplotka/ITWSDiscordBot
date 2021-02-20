@@ -1,5 +1,6 @@
 const fetch = require("node-fetch");
 const Redis = require("ioredis");
+const { isModeratorOrAbove } = require("../permissions");
 const { Op } = require("sequelize");
 const { Course, CourseEnrollment, CourseTeam } = require("../db");
 
@@ -12,7 +13,6 @@ module.exports = {
     name: "courses",
     description: "Manage courses with their categories, channels, and roles.",
     serverOnly: true,
-    adminOnly: true,
     usages: {
         "courses list": "List courses",
         "courses add <title> <short title> ": "Create a course category, general channels, and role.",
@@ -45,6 +45,8 @@ module.exports = {
             ];
             message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "sync") {
+            await isModeratorOrAbove(message.author);
+
             if (args.length < 2) {
                 return message.reply("Please provide a course title or short title.");
             }
@@ -94,6 +96,8 @@ module.exports = {
             }
             await message.channel.send(messageLines.join("\n"), { split: true });
         } else if (subcommand === "add") {
+            await isModeratorOrAbove(message.author);
+
             const [title, shortTitle] = args.slice(1);
             const newCourse = Course.build({
                 title,
@@ -160,6 +164,8 @@ module.exports = {
             ];
             message.channel.send(messageLines.join("\n"));
         } else if (subcommand === "remove") {
+            await isModeratorOrAbove(message.author);
+
             const identifier = args[1];
             const course = await findCourse(identifier);
 
@@ -212,6 +218,8 @@ module.exports = {
             // Delete DB record
             await course.destroy();
         } else if (subcommand === "add-team") {
+            await isModeratorOrAbove(message.author);
+
             const [courseIdentifier, ...teamTitles] = args.slice(1);
             const course = await findCourse(courseIdentifier);
 
@@ -297,6 +305,8 @@ module.exports = {
 
             await message.channel.send("Added teams!");
         } else if (subcommand === "remove-team") {
+            await isModeratorOrAbove(message.author);
+
             const [courseIdentifier, ...teamTitles] = args.slice(1);
             const course = await Course.findOne({
                 where: {
