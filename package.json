@@ -10,12 +10,12 @@
   "author": "Simar Singh",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.2.0",
+    "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
-    "ioredis": "^4.19.4",
+    "ioredis": "^4.22.0",
     "node-fetch": "^2.6.1",
     "pg": "^8.5.1",
     "pg-hstore": "^2.3.3",
-    "sequelize": "^6.4.0"
+    "sequelize": "^6.5.0"
   }
 }
