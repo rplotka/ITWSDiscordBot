@@ -49,7 +49,11 @@ module.exports = {
 
     if (args.length === 0) {
       // List groups
-      const groups = await Group.findAll();
+      const groups = await Group.findAll({
+        where: {
+          isPublic: true
+        }
+      });
       const messageLines = [
         '**Public Groups**',
         ...groups.map((group) => `(${group.shortTitle}) ${group.title}`),
