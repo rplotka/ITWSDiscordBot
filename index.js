@@ -19,10 +19,6 @@ const { NotAuthorized } = require('./core/permissions');
 const COMMAND_PREFIX = process.env.DISCORD_COMMAND_PREFIX;
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 
-// Define Roles with id's
-/** Role names matched to role IDs */
-// const roles = {};
-
 /** Bot object */
 const bot = new Discord.Client();
 
