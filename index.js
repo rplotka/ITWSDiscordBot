@@ -66,7 +66,8 @@ bot.on('message', async (message) => {
 
   // Attempt to run command
   try {
-    const command = bot.commands.get(commandName) ?? bot.commandAliases.get(commandName);
+    const command =
+      bot.commands.get(commandName) ?? bot.commandAliases.get(commandName);
     const guild = bot.guilds.cache.get(SERVER_ID);
     const member = await fetchMemberById(guild, message.author.id);
 
