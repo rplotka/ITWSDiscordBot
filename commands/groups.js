@@ -52,7 +52,8 @@ module.exports = {
       const groups = await Group.findAll({
         where: {
           isPublic: true
-        }
+        },
+        order: [['shortTitle', 'ASC']]
       });
       const messageLines = [
         '**Public Groups**',
