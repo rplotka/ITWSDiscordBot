@@ -16,7 +16,7 @@ module.exports = {
         '**Commands**',
         ...commands
           .mapValues(
-            (command) => `\`${command.name}\` - ${command.description}`
+            (command) => `\`${command.name}\` ${command.alias ? 'or `' + command.alias + '` ' : '' }- ${command.description}`
           )
           .array(),
       ];

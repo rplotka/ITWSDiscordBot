@@ -28,13 +28,14 @@ const bot = new Discord.Client();
 
 // Load commands from commands folder
 bot.commands = new Discord.Collection();
+bot.commandAliases = new Discord.Collection();
 const commandFiles = fs
   .readdirSync('./commands')
   .filter((file) => file.endsWith('.js'));
 commandFiles.forEach((file) => {
   const command = require(`./commands/${file}`);
   bot.commands.set(command.name, command);
-  if (command.alias) bot.commands.set(command.alias, command);
+  if (command.alias) bot.commandAliases.set(command.alias, command);
 });
 
 bot.once('ready', async () => {
@@ -52,11 +53,20 @@ bot.on('message', async (message) => {
     message.content.slice(COMMAND_PREFIX.length)
   );
 
-  if (!bot.commands.has(commandName)) return;
+  // Not a command
+  if (!bot.commands.has(commandName) && !bot.commandAliases.has(commandName)) {
+    // Message looks like a command but is not recognized!
+    if (message.content.startsWith(COMMAND_PREFIX)) {
+      await message.reply(
+        `Command not found. Use \`${COMMAND_PREFIX}help\` for a list of commands.`
+      );
+    }
+    return;
+  }
 
   // Attempt to run command
   try {
-    const command = bot.commands.get(commandName);
+    const command = bot.commands.get(commandName) ?? bot.commandAliases.get(commandName);
     const guild = bot.guilds.cache.get(SERVER_ID);
     const member = await fetchMemberById(guild, message.author.id);
 
