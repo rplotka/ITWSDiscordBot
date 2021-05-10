@@ -188,6 +188,12 @@ module.exports = {
           type: 'text',
           topic: `📢 Course announcements for **${newCourse.title}**!`,
           parent: courseCategory.id,
+          permissionOverwrites: [
+            {
+              id: courseRole.id,
+              allow: ['SEND_MESSAGES'],
+            },
+          ],
         }
       );
 
