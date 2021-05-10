@@ -17,6 +17,8 @@ const { NotAuthorized } = require('./core/permissions');
 
 /** The prefix that commands use. */
 const COMMAND_PREFIX = process.env.DISCORD_COMMAND_PREFIX;
+
+/** The unique ID of the ITWS server. */
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 
 /** Bot object */
@@ -28,16 +30,20 @@ bot.commandAliases = new Discord.Collection();
 const commandFiles = fs
   .readdirSync('./commands')
   .filter((file) => file.endsWith('.js'));
+
+// Register each command with an optional alias
 commandFiles.forEach((file) => {
   const command = require(`./commands/${file}`);
   bot.commands.set(command.name, command);
   if (command.alias) bot.commandAliases.set(command.alias, command);
 });
 
+/** Event handler for ready event. Called once bot has connected to Discord. */
 bot.once('ready', async () => {
   logger.info(`Bot is ready with command prefix ${COMMAND_PREFIX}`);
 });
 
+/** Event handler for messages. Called when ANY message is sent. */
 bot.on('message', async (message) => {
   // Ignore non-commands and bot messages
   if (!message.content.startsWith(COMMAND_PREFIX) || message.author.bot) return;
@@ -64,12 +70,18 @@ bot.on('message', async (message) => {
   try {
     const command =
       bot.commands.get(commandName) ?? bot.commandAliases.get(commandName);
+
+    // Get the context that the command was called in
     const guild = bot.guilds.cache.get(SERVER_ID);
     const member = await fetchMemberById(guild, message.author.id);
 
+    // Actually execute the command
     await command.execute(message, member, args);
   } catch (error) {
     logger.error(`Command error occurred: ${error}`);
+
+    // In the event of an error, it might be expected or unexpected
+    // Check the type of error and determine the proper reply
     if (error instanceof NotAuthorized) {
       await message.reply(
         error.message || 'You do not have permission to run that command.'
@@ -82,5 +94,5 @@ bot.on('message', async (message) => {
   }
 });
 
-// Bot login using key
+// Bot login using token
 bot.login(process.env.DISCORD_BOT_TOKEN);
