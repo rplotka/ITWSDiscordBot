@@ -1,17 +1,19 @@
+// eslint-disable-next-line no-unused-vars
+const Discord = require('discord.js');
+
 /**
  * Splits a message into a command name and its arguments.
  * Assumes that the command prefix has already been removed.
  * The command name is lowercased. It treats arguments in
  * quotation marks as single arguments.
  *
- * ### Examples
- * - ECHO hello world -> ["echo", "hello", "world"]
- * - echo "hello world" -> ["echo", "hello world"]
- * - eCHo goodbye "hello world" -> ["echo", "goodbye", "hello world"]
+ * @param {string} lineRaw asdasdasdasd
+ * @return {[string, string[]]} [command name, arg array]
  *
- * ### Returns
- * An array with the comamnd name followed by optional arguments.
- * Can be used in destructuring like `const [command, args] = parseCommandAndArgs(line);`
+ * ### Examples
+ * - ECHO hello world -> ["echo", ["hello", "world"]]
+ * - echo "hello world" -> ["echo", ["hello world"]]
+ * - eCHo goodbye "hello world" -> ["echo", ["goodbye", "hello world"]]
  */
 function parseCommandAndArgs(lineRaw) {
   const line = lineRaw.trim();
@@ -29,8 +31,9 @@ function parseCommandAndArgs(lineRaw) {
  * from their Discord user ID. Will only work if the
  * user is on the server.
  *
- * @param {*} server
- * @param {*} userId
+ * @param {Discord.Guild} server
+ * @param {string} userId
+ * @return {Promise<Discord.GuildMember>} The found member (if exists)
  */
 function fetchMemberById(server, userId) {
   return server.members.fetch(userId);
@@ -39,9 +42,9 @@ function fetchMemberById(server, userId) {
 /**
  * Attempts to toggle a specific role on a server member.
  *
- * @param member Discord server member
- * @param role Role ID or object
- * @returns boolean Whether the role was added (true) or removed (false)
+ * @param {Discord.GuildMember} member Discord server member
+ * @param {Discord.Role | string} roleOrRoleId Role ID or object
+ * @returns {Promise<boolean>} Whether the role was added (true) or removed (false)
  */
 async function toggleMemberRole(member, roleOrRoleId) {
   // Remove
