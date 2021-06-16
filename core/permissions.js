@@ -1,6 +1,11 @@
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 const { Permissions } = require('discord.js');
 
+/**
+ * Error representing a failed attempt to do something
+ * without the proper authorization. For example,
+ * this might be thrown when a non-admin attempts to run an admin command.
+ */
 class NotAuthorized extends Error {
   constructor(message) {
     super(message);
