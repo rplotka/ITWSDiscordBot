@@ -12,6 +12,17 @@ const ADMIN_ROLE_ID = process.env.DISCORD_ADMIN_ROLE_ID;
 
 const redis = new Redis(process.env.REDIS_URL);
 
+/**
+ * Generators for each type of channel topic.
+ */
+const courseChannelTopics = {
+  announcements: (course) => `📢 Course announcements for **${course.title}**!`,
+  general: (course) => `💬 General chat for **${course.title}**.`,
+  discussion: (course) => `🗣️ Discussion room for **${course.title}**.`,
+  team: (teamTitle, course) =>
+    `🔒 Private discussion channel for **Team ${teamTitle}** in **${course.title}**.`,
+};
+
 async function findCourse(courseIdentifier) {
   const course = await Course.findOne({
     where: {
@@ -186,20 +197,20 @@ module.exports = {
         `${newCourse.shortTitle}-announcements`,
         {
           type: 'text',
-          topic: `📢 Course announcements for **${newCourse.title}**!`,
+          topic: courseChannelTopics.announcements(newCourse),
           parent: courseCategory.id,
         }
       );
 
       await server.channels.create('general', {
         type: 'text',
-        topic: `💬 General chat for **${newCourse.title}**.`,
+        topic: courseChannelTopics.general(newCourse),
         parent: courseCategory.id,
       });
 
       await server.channels.create('discussion', {
         type: 'text',
-        topic: `🗣️ Discussion room for **${newCourse.title}**.`,
+        topic: courseChannelTopics.discussion(newCourse),
         parent: courseCategory.id,
       });
 
@@ -322,7 +333,7 @@ module.exports = {
           {
             type: 'text',
             parent: course.discordCategoryId,
-            topic: `🔒 Private discussion channel for **Team ${teamTitle}** in **${course.title}**.`,
+            topic: courseChannelTopics.team(teamTitle, course),
             permissionOverwrites: [
               {
                 id: server.id,
