@@ -3,6 +3,7 @@ const logger = require('./logging').child({ from: 'db' });
 
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   logging: false,
+  ssl: true,
 });
 
 const Course = sequelize.define('Course', {
