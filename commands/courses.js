@@ -199,6 +199,12 @@ module.exports = {
           type: 'text',
           topic: courseChannelTopics.announcements(newCourse),
           parent: courseCategory.id,
+          permissionOverwrites: [
+            {
+              id: courseRole.id,
+              allow: ['SEND_MESSAGES'],
+            },
+          ],
         }
       );
 
