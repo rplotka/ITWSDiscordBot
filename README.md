@@ -30,3 +30,9 @@ All of these channels are hidden by default to those without the general course 
 - `#discussion`: Text channel for students and faculty to facilitate discussions on inclass topics or general topics.
 - `#team-<team>`: Private text channel for team members and course faculty.
 - `Team <team>`: Private voice channel for team members and course faculty.
+
+
+## Database Schema
+
+![ITWS Discord](https://user-images.githubusercontent.com/8422699/134196542-b3677e9f-297f-4e10-bdda-ec04ff0c7b19.png)
+
