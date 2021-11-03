@@ -22,7 +22,9 @@ const COMMAND_PREFIX = process.env.DISCORD_COMMAND_PREFIX;
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 
 /** Bot object */
-const bot = new Discord.Client();
+const bot = new Discord.Client({
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION']
+});
 
 // Load commands from commands folder
 bot.commands = new Discord.Collection();
@@ -41,6 +43,48 @@ commandFiles.forEach((file) => {
 /** Event handler for ready event. Called once bot has connected to Discord. */
 bot.once('ready', async () => {
   logger.info(`Bot is ready with command prefix ${COMMAND_PREFIX}`);
+});
+
+bot.on('messageReactionAdd', async (reaction, user) => {
+	// When a reaction is received, check if the structure is partial
+	if (reaction.partial) {
+		try {
+      // Get full
+			await reaction.fetch();
+		} catch (error) {
+			console.error('Something went wrong when fetching the message:', error);
+			// Return as `reaction.message.author` may be undefined/null
+			return;
+		}
+	}
+
+  // Check for bot, emoji, and message id
+  if(!user.bot && reaction.emoji.name === '🟠' && reaction.message.id == '905337910973325362') {
+    const { guild } = reaction.message;
+    const member = guild.members.cache.find(member => member.id === user.id); 
+    member.roles.add('902669004081074237');
+  }
+});
+
+bot.on('messageReactionRemove', async (reaction, user) => {
+	// When a reaction is received, check if the structure is partial
+	if (reaction.partial) {
+		try {
+      // Get full
+			await reaction.fetch();
+		} catch (error) {
+			console.error('Something went wrong when fetching the message:', error);
+			// Return as `reaction.message.author` may be undefined/null
+			return;
+		}
+	}
+
+  // Check for bot, emoji, and message id
+  if(!user.bot && reaction.emoji.name === '🟠' && reaction.message.id == '905337910973325362') {
+    const { guild } = reaction.message;
+    const member = guild.members.cache.find(member => member.id === user.id); 
+    member.roles.remove('902669004081074237');
+  }
 });
 
 /** Event handler for messages. Called when ANY message is sent. */
