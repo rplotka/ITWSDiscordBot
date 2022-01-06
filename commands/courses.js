@@ -7,6 +7,8 @@ const { isModeratorOrAbove } = require('../core/permissions');
 const { Course, CourseTeam } = require('../core/db');
 const { fetchMember } = require('../core/utils');
 
+const logger = require('../core/logging').child({ from: 'courses' });
+
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 const ADMIN_ROLE_ID = process.env.DISCORD_ADMIN_ROLE_ID;
 
@@ -151,14 +153,19 @@ module.exports = {
       }
       await message.channel.send(messageLines.join('\n'), { split: true });
     } else if (subcommand === 'add') {
+      // Ensure caller is a moderator or above
       await isModeratorOrAbove(member);
 
+      // courses add <title> <short title>
       const [title, shortTitle] = args.slice(1);
       const newCourse = Course.build({
         title,
         shortTitle,
       });
 
+      logger.info(
+        `${member} is attempting to add a course '${title}' ('${shortTitle}')`
+      );
       // Create course role
       const courseRole = await server.roles.create({
         data: {
@@ -168,23 +175,44 @@ module.exports = {
       });
       newCourse.discordRoleId = courseRole.id;
 
+      logger.info(`Created new course role with ID ${courseRole.id}`);
+
+      // Create course instructor role
+      const courseInstructorRole = await server.roles.create({
+        data: {
+          name: `${newCourse.title} Instructor`,
+        },
+        reason: `Instructor role for new course ${newCourse.title}`,
+      });
+      newCourse.discordInstructorRoleId = courseInstructorRole.id;
+
+      logger.info(
+        `Created new instructor role with ID ${courseInstructorRole.id}`
+      );
+
+      const basePermissionOverwrites = [
+        {
+          id: server.id,
+          deny: ['VIEW_CHANNEL'],
+        },
+        {
+          id: ADMIN_ROLE_ID,
+          allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+        },
+        {
+          id: courseInstructorRole.id,
+          allow: ['MANAGE_MESSAGES'],
+        },
+        {
+          id: courseRole.id,
+          allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+        },
+      ];
+
       // Create course category
       const courseCategory = await server.channels.create(newCourse.title, {
         type: 'category',
-        permissionOverwrites: [
-          {
-            id: server.id,
-            deny: ['VIEW_CHANNEL'],
-          },
-          {
-            id: ADMIN_ROLE_ID,
-            allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
-          },
-          {
-            id: courseRole.id,
-            allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
-          },
-        ],
+        permissionOverwrites: basePermissionOverwrites,
       });
       newCourse.discordCategoryId = courseCategory.id;
 
@@ -201,8 +229,19 @@ module.exports = {
           parent: courseCategory.id,
           permissionOverwrites: [
             {
+              id: server.id,
+              deny: ['VIEW_CHANNEL'],
+            },
+            // Only instructors can send messages
+            {
+              id: courseInstructorRole.id,
+              allow: ['SEND_MESSAGES', 'MANAGE_MESSAGES'],
+            },
+            // Course students can only read messages
+            {
               id: courseRole.id,
-              allow: ['SEND_MESSAGES'],
+              deny: ['SEND_MESSAGES'],
+              allow: ['VIEW_CHANNEL', 'READ_MESSAGE_HISTORY'],
             },
           ],
         }
@@ -223,7 +262,7 @@ module.exports = {
       await newCourse.save();
 
       const messageLines = [
-        `**Created course ${newCourse.title} (${newCourse.shortTitle})**`,
+        `**Created course ${newCourse.title} (${newCourse.shortTitle})**. Assign the ${courseRole} and ${courseInstructorRole} to instructors.`,
         `Go into the settings of ${courseAnnouncementsChannel} to turn it into a real Announcements channel.`,
       ];
       message.channel.send(messageLines.join('\n'));
@@ -302,7 +341,16 @@ module.exports = {
         return;
       }
 
+      logger.info(
+        `${member} is attempting to add teams ${teamTitles.join(
+          ', '
+        )} to course ${course.title}`
+      );
+
+      console.log(course);
+
       for (const teamTitle of teamTitles) {
+        logger.info(`Attempting to create Team ${teamTitle}`);
         // Ensure team doesn't already exist
         const existingTeam = await CourseTeam.findOne({
           where: {
@@ -333,6 +381,27 @@ module.exports = {
         });
         courseTeam.discordRoleId = teamRole.id;
 
+        logger.info(`Created team role with ID ${teamRole.id}`);
+
+        const perms = [
+          {
+            id: server.id,
+            deny: ['VIEW_CHANNEL'],
+          },
+          {
+            id: course.discordRoleId,
+            deny: ['VIEW_CHANNEL'],
+          },
+          {
+            id: course.discordInstructorRoleId,
+            allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'MANAGE_MESSAGES'],
+          },
+          {
+            id: teamRole.id,
+            allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+          },
+        ];
+
         // Text channel
         const teamTextChannel = await server.channels.create(
           `team-${teamTitle}`,
@@ -340,27 +409,12 @@ module.exports = {
             type: 'text',
             parent: course.discordCategoryId,
             topic: courseChannelTopics.team(teamTitle, course),
-            permissionOverwrites: [
-              {
-                id: server.id,
-                deny: ['VIEW_CHANNEL'],
-              },
-              {
-                id: course.discordRoleId,
-                deny: ['VIEW_CHANNEL'],
-              },
-              {
-                id: teamRole.id,
-                allow: [
-                  'VIEW_CHANNEL',
-                  'SEND_MESSAGES',
-                  'READ_MESSAGE_HISTORY',
-                ],
-              },
-            ],
+            permissionOverwrites: perms,
           }
         );
         courseTeam.discordTextChannelId = teamTextChannel.id;
+
+        logger.info(`Created team text channel with ID ${teamTextChannel.id}`);
 
         // Voice channel
         const teamVoiceChannel = await server.channels.create(
@@ -376,6 +430,10 @@ module.exports = {
               {
                 id: course.discordRoleId,
                 deny: ['VIEW_CHANNEL'],
+              },
+              {
+                id: course.discordInstructorRoleId,
+                allow: ['VIEW_CHANNEL'],
               },
               {
                 id: teamRole.id,
