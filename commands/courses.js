@@ -151,8 +151,10 @@ module.exports = {
       }
       await message.channel.send(messageLines.join('\n'), { split: true });
     } else if (subcommand === 'add') {
+      // Ensure caller is a moderator or above
       await isModeratorOrAbove(member);
 
+      // courses add <title> <short title>
       const [title, shortTitle] = args.slice(1);
       const newCourse = Course.build({
         title,
@@ -168,23 +170,38 @@ module.exports = {
       });
       newCourse.discordRoleId = courseRole.id;
 
+      // Create course instructor role
+      const courseInstructorRole = await server.roles.create({
+        data: {
+          name: `${newCourse.title} Instructor`,
+        },
+        reason: `Instructor role for new course ${newCourse.title}`,
+      });
+      newCourse.discordInstructorRoleId = courseInstructorRole.id;
+
+      const basePermissionOverwrites = [
+        {
+          id: server.id,
+          deny: ['VIEW_CHANNEL'],
+        },
+        {
+          id: ADMIN_ROLE_ID,
+          allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+        },
+        {
+          id: courseInstructorRole.id,
+          allow: ['MANAGE_MESSAGES'],
+        },
+        {
+          id: courseRole.id,
+          allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+        },
+      ];
+
       // Create course category
       const courseCategory = await server.channels.create(newCourse.title, {
         type: 'category',
-        permissionOverwrites: [
-          {
-            id: server.id,
-            deny: ['VIEW_CHANNEL'],
-          },
-          {
-            id: ADMIN_ROLE_ID,
-            allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
-          },
-          {
-            id: courseRole.id,
-            allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
-          },
-        ],
+        permissionOverwrites: basePermissionOverwrites,
       });
       newCourse.discordCategoryId = courseCategory.id;
 
@@ -201,8 +218,19 @@ module.exports = {
           parent: courseCategory.id,
           permissionOverwrites: [
             {
+              id: server.id,
+              deny: ['VIEW_CHANNEL'],
+            },
+            // Only instructors can send messages
+            {
+              id: courseInstructorRole.id,
+              allow: ['SEND_MESSAGES', 'MANAGE_MESSAGES'],
+            },
+            // Course students can only read messages
+            {
               id: courseRole.id,
-              allow: ['SEND_MESSAGES'],
+              deny: ['SEND_MESSAGES'],
+              allow: ['VIEW_CHANNEL', 'READ_MESSAGE_HISTORY'],
             },
           ],
         }
@@ -223,7 +251,7 @@ module.exports = {
       await newCourse.save();
 
       const messageLines = [
-        `**Created course ${newCourse.title} (${newCourse.shortTitle})**`,
+        `**Created course ${newCourse.title} (${newCourse.shortTitle})**. Assign the ${courseRole} and ${courseInstructorRole} to instructors.`,
         `Go into the settings of ${courseAnnouncementsChannel} to turn it into a real Announcements channel.`,
       ];
       message.channel.send(messageLines.join('\n'));

@@ -40,6 +40,9 @@ const Course = sequelize.define('Course', {
   discordRoleId: {
     type: DataTypes.STRING,
   },
+  discordInstructorRoleId: {
+    type: DataTypes.STRING,
+  },
 });
 
 const CourseTeam = sequelize.define('CourseTeam', {
