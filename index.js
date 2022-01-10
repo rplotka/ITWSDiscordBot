@@ -23,7 +23,7 @@ const SERVER_ID = process.env.DISCORD_SERVER_ID;
 
 /** Bot object */
 const bot = new Discord.Client({
-  partials: ['MESSAGE', 'CHANNEL', 'REACTION']
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
 });
 
 // Load commands from commands folder
@@ -45,47 +45,118 @@ bot.once('ready', async () => {
   logger.info(`Bot is ready with command prefix ${COMMAND_PREFIX}`);
 });
 
-bot.on('messageReactionAdd', async (reaction, user) => {
-	// When a reaction is received, check if the structure is partial
-	if (reaction.partial) {
-		try {
+/**
+ * Associations between message reactions and roles.
+ *
+ * Top-level key is a particular message ID.
+ *
+ * If setRoles is set, addRoles and removeRoles will be ignored.
+ */
+const messageReactionAutomations = {
+  '929925783454089266': {
+    '🟠': {
+      onAddReaction: {
+        addRoles: ['902669004081074237'],
+      },
+      onRemoveReaction: {
+        removeRoles: ['902669004081074237'],
+      },
+    },
+    '👍': {
+      onAddReaction: {
+        setRoles: ['756215715362504835', '763956900478844999'],
+      },
+    },
+  },
+};
+
+async function handleReaction(reaction, user, added) {
+  if (user.bot) return;
+
+  // When a reaction is received, check if the structure is partial
+  if (reaction.partial) {
+    try {
       // Get full
-			await reaction.fetch();
-		} catch (error) {
-			console.error('Something went wrong when fetching the message:', error);
-			// Return as `reaction.message.author` may be undefined/null
-			return;
-		}
-	}
-
-  // Check for bot, emoji, and message id
-  if(!user.bot && reaction.emoji.name === '🟠' && reaction.message.id == '905337910973325362') {
-    const { guild } = reaction.message;
-    const member = guild.members.cache.find(member => member.id === user.id); 
-    member.roles.add('902669004081074237');
+      await reaction.fetch();
+    } catch (error) {
+      console.error('Something went wrong when fetching the message:', error);
+      // Return as `reaction.message.author` may be undefined/null
+      return;
+    }
   }
-});
 
-bot.on('messageReactionRemove', async (reaction, user) => {
-	// When a reaction is received, check if the structure is partial
-	if (reaction.partial) {
-		try {
-      // Get full
-			await reaction.fetch();
-		} catch (error) {
-			console.error('Something went wrong when fetching the message:', error);
-			// Return as `reaction.message.author` may be undefined/null
-			return;
-		}
-	}
+  const mID = reaction.message.id;
+  const member = reaction.message.guild.members.cache.find(
+    (m) => m.id === user.id
+  );
+  const emoji = reaction.emoji.name;
 
-  // Check for bot, emoji, and message id
-  if(!user.bot && reaction.emoji.name === '🟠' && reaction.message.id == '905337910973325362') {
-    const { guild } = reaction.message;
-    const member = guild.members.cache.find(member => member.id === user.id); 
-    member.roles.remove('902669004081074237');
+  // We have to be very careful to not access a property of a nested object that does not exist here
+  if (
+    mID in messageReactionAutomations &&
+    emoji in messageReactionAutomations[mID]
+  ) {
+    const key = added ? 'onAddReaction' : 'onRemoveReaction';
+    if (!(key in messageReactionAutomations[mID][emoji])) return;
+
+    // Extract these three arrays, NONE OF WHICH HAVE TO BE SET
+    const { addRoles, removeRoles, setRoles } = messageReactionAutomations[mID][
+      emoji
+    ][key];
+
+    // If the setRoles array is set, ignore add and remove as they could conflict
+    if (setRoles) {
+      // Filter members roles that aren't in removeRolesExcept
+      logger.info(
+        `${member} ${
+          added ? 'reacted' : 'unreacted'
+        } to message ${mID} with ${emoji} and had their roles set to ${setRoles.join(
+          ', '
+        )}`
+      );
+      await member.roles.set(setRoles);
+    } else {
+      if (removeRoles) {
+        logger.info(
+          `${member} ${
+            added ? 'reacted' : 'unreacted'
+          } to message ${mID} with ${emoji} and had roles ${removeRoles.join(
+            ', '
+          )} removed`
+        );
+        await member.roles.remove(removeRoles);
+      }
+
+      if (addRoles) {
+        logger.info(
+          `${member} ${
+            added ? 'reacted' : 'unreacted'
+          } to message ${mID} with ${emoji} and was given roles ${addRoles.join(
+            ', '
+          )}`
+        );
+        await member.roles.add(addRoles);
+      }
+    }
   }
-});
+}
+
+bot.on('messageReactionAdd', async (reaction, user) =>
+  handleReaction(reaction, user, true).catch((err) => {
+    reaction.message.reply('There was an error, please message a Moderator.');
+    logger.error(`Failed to handle add message reaction`, { err });
+  })
+);
+bot.on('messageReactionRemove', async (reaction, user) =>
+  handleReaction(reaction, user, false).catch((err) => {
+    reaction.message.reply('There was an error, please message a Moderator.');
+    logger.error(`Failed to handle remove message reaction`, {
+      emoji: reaction.name,
+      user: user.id,
+      err,
+    });
+  })
+);
 
 /** Event handler for messages. Called when ANY message is sent. */
 bot.on('message', async (message) => {
