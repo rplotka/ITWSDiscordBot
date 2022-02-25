@@ -56,15 +56,20 @@ const messageReactionAutomations = {
   '929925783454089266': {
     '🟠': {
       onAddReaction: {
-        addRoles: ['902669004081074237'],
+        addRoles: ['902669004081074237'], // @Prospective Students
       },
       onRemoveReaction: {
-        removeRoles: ['902669004081074237'],
+        removeRoles: ['902669004081074237'], // @Prospective Students
       },
     },
-    '👍': {
+  },
+  '946803862348660787': {
+    '🟠': {
       onAddReaction: {
-        setRoles: ['756215715362504835', '763956900478844999'],
+        addRoles: ['812420665487392818'], // @Accepted Students
+      },
+      onRemoveReaction: {
+        removeRoles: ['812420665487392818'], // @Accepted Students
       },
     },
   },
