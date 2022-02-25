@@ -64,7 +64,7 @@ const messageReactionAutomations = {
     },
   },
   '946803862348660787': {
-    '🟠': {
+    '🟢': {
       onAddReaction: {
         addRoles: ['812420665487392818'], // @Accepted Students
       },
