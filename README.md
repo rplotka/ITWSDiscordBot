@@ -7,26 +7,32 @@ The ITWS Discord bot manages the ITWS Discord server by managing courses' roles,
 - [Simar S '24](https://github.com/simar-singh)
 - [Frank M '22](https://github.com/Apexal)
 
-## Environment Variables
+## Commands
+
+
+
+## Development
+
+### Environment Variables
 
 `DISCORD_BOT_TOKEN` the *secret* bot token found on the Discord developer page for the bot
 
 ---
 
-## Course Discord Layout
+### Course Discord Layout
 
-### Terminology
+#### Terminology
 
 - `<title>` refers to a course's full title in the database, e.g. `"Intro to ITWS"`
 - `<short title>` refers to a course's short title in the database, e.g. `"intro"`
 
-### Roles
+#### Roles
 
 - `@<title>`: Role for every student, TA, and instructor in the course.
 - `@<title> Instructor`: Role for every instructor in the course.
 - `@<title> Team <team>`: Role for Team `<team>` members (students only, not faculty).
 
-### Channels
+#### Channels
 
 All of these channels are hidden by default to those without the general course role detailed above.
 
@@ -36,6 +42,6 @@ All of these channels are hidden by default to those without the general course 
 - `#team-<team>`: Private text channel for team members and course faculty.
 - `Team <team>`: Private voice channel for team members and course faculty.
 
-## Database Schema
+### Database Schema
 
 ![ITWS Discord](https://user-images.githubusercontent.com/8422699/134196542-b3677e9f-297f-4e10-bdda-ec04ff0c7b19.png)
