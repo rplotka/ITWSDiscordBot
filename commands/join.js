@@ -51,11 +51,12 @@ module.exports = {
       // When selected, a new interaction will be fired with the custom ID specified
       // Another event handler can pick this up and complete the joining or leaving of the course
       await interaction.reply({
-        content: `Choose a course to **join**.`,
+        content: `❔ Choose a course to **join**.`,
         components: [row],
         ephemeral: true,
       });
     } else if (target === 'team') {
+      // Find the course teams that are for the courses the member is in and aren't currently in
       const courseTeams = await CourseTeam.findAll({
         where: {
           '$Course.discordRoleId$': {
@@ -67,24 +68,33 @@ module.exports = {
         },
         include: [{ model: Course, as: 'Course' }],
       });
-      const row = courseTeamSelectorActionRowFactory('join', courseTeams);
 
-      logger.info(courseTeams);
+      // Generate select menu of these teams
+      const row = courseTeamSelectorActionRowFactory('join', courseTeams);
 
       // Discord gets mad if we send a select menu with no options so we check for that
       if (courseTeams.length === 0) {
+        const currentCourses = await Course.findAll({
+          where: {
+            discordRoleId: {
+              [Op.in]: memberRoleIds,
+            },
+          },
+        });
         await interaction.reply({
-          content: 'ℹ️ There are no teams in your current courses to join.',
+          content: `ℹ️ There are no teams in your courses **${currentCourses
+            .map((course) => course.title)
+            .join(', ')}** to join.`,
           ephemeral: true,
         });
         return;
       }
 
-      // Send a message with a select menu of courses
+      // Send a message with a select menu of course teams
       // When selected, a new interaction will be fired with the custom ID specified
-      // Another event handler can pick this up and complete the joining or leaving of the course
+      // Another event handler can pick this up and complete the joining or leaving of the course team
       await interaction.reply({
-        content: `Choose a course team to **join**.`,
+        content: `❔ Choose a course team to **join**.`,
         components: [row],
         ephemeral: true,
       });

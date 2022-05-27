@@ -23,6 +23,7 @@ module.exports = {
     )
       return;
 
+    // Find course team they want to join
     const courseTeamId = interaction.values[0];
 
     logger.info(
@@ -41,16 +42,20 @@ module.exports = {
       return;
     }
 
-    // Attempt to add course team role
+    // Attempt to add course team role (also tries to send welcome message)
     try {
       await addMemberToCourseTeam(interaction.member, courseTeam);
-    } catch (e) {
+    } catch (error) {
       await interaction.update({
         content:
           '❌ Failed to add course team role. Please contact a Moderator on the server!',
         components: [],
         ephemeral: true,
       });
+      logger.error(
+        `Failed to add ${interaction.member} to course team '${courseTeam.title}' (${courseTeam.Course.title})`
+      );
+      logger.error(error);
       return;
     }
 
