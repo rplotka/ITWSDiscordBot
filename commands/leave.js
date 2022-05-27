@@ -14,11 +14,15 @@ const {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('join')
-    .setDescription('Join a course or a course team.')
-    .addSubcommand((sc) => sc.setName('course').setDescription('Join a course'))
+    .setName('leave')
+    .setDescription('Leave a course or a course team.')
     .addSubcommand((sc) =>
-      sc.setName('team').setDescription('Join a course team')
+      sc.setName('course').setDescription('Leave a course you are currently in')
+    )
+    .addSubcommand((sc) =>
+      sc
+        .setName('team')
+        .setDescription('Leave a course team you are currently in')
     ),
   /**
    * @param {CommandInteraction} interaction
@@ -32,16 +36,16 @@ module.exports = {
       const courses = await Course.findAll({
         where: {
           discordRoleId: {
-            [Op.notIn]: memberRoleIds,
+            [Op.in]: memberRoleIds,
           },
         },
       });
-      const row = courseSelectorActionRowFactory('join', courses);
+      const row = courseSelectorActionRowFactory('leave', courses);
 
       // Discord gets mad if we send a select menu with no options so we check for that
       if (courses.length === 0) {
         await interaction.reply({
-          content: 'ℹ️ There are no other courses to join.',
+          content: 'ℹ️ You are not in any courses.',
           ephemeral: true,
         });
         return;
@@ -51,7 +55,7 @@ module.exports = {
       // When selected, a new interaction will be fired with the custom ID specified
       // Another event handler can pick this up and complete the joining or leaving of the course
       await interaction.reply({
-        content: `❔ Choose a course to **join**.`,
+        content: `❔ Choose a course to **leave**.`,
         components: [row],
         ephemeral: true,
       });
@@ -59,42 +63,29 @@ module.exports = {
       // Find the course teams that are for the courses the member is in and aren't currently in
       const courseTeams = await CourseTeam.findAll({
         where: {
-          '$Course.discordRoleId$': {
+          discordRoleId: {
             [Op.in]: memberRoleIds,
           },
-          discordRoleId: {
-            [Op.notIn]: memberRoleIds,
-          },
         },
-        include: [{ model: Course, as: 'Course' }],
       });
-
-      // Generate select menu of these teams
-      const row = courseTeamSelectorActionRowFactory('join', courseTeams);
 
       // Discord gets mad if we send a select menu with no options so we check for that
       if (courseTeams.length === 0) {
-        const currentCourses = await Course.findAll({
-          where: {
-            discordRoleId: {
-              [Op.in]: memberRoleIds,
-            },
-          },
-        });
         await interaction.reply({
-          content: `ℹ️ There are no teams in your courses **${currentCourses
-            .map((course) => course.title)
-            .join(', ')}** to join.`,
+          content: 'ℹ️ You are not in any course teams.',
           ephemeral: true,
         });
         return;
       }
 
+      // Generate select menu of these teams
+      const row = courseTeamSelectorActionRowFactory('leave', courseTeams);
+
       // Send a message with a select menu of course teams
       // When selected, a new interaction will be fired with the custom ID specified
       // Another event handler can pick this up and complete the joining or leaving of the course team
       await interaction.reply({
-        content: `❔ Choose a course team to **join**.`,
+        content: `❔ Choose a course team to **leave**.`,
         components: [row],
         ephemeral: true,
       });
