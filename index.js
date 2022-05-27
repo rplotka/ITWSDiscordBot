@@ -22,13 +22,27 @@ const eventFiles = readdirSync(eventsPath).filter((file) =>
 eventFiles.forEach((file) => {
   const filePath = path.join(eventsPath, file);
   const event = require(filePath);
+  if (event.disabled) {
+    logger.warn(
+      `Skipping disabled event lister for event '${event.name}' in file 'events/${file}`
+    );
+  }
   if (event.once) {
     client.once(event.name, (...args) => event.execute(...args));
   } else {
-    client.on(event.name, (...args) => event.execute(...args));
+    client.on(event.name, (...args) => {
+      try {
+        event.execute(...args);
+      } catch (error) {
+        logger.error(
+          `An error occurred when the event lister for event '${event.name}' in file 'events/${file}'`
+        );
+        logger.error(error);
+      }
+    });
   }
   logger.info(
-    `Set up event listener for event '${event.name}' in file 'events/${file}'`
+    `Added listener for event '${event.name}' in file 'events/${file}'`
   );
 });
 

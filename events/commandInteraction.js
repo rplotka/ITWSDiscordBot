@@ -1,4 +1,4 @@
-const { Client, CommandInteraction } = require('discord.js');
+const { CommandInteraction } = require('discord.js');
 const logger = require('../core/logging');
 
 module.exports = {

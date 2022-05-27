@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 const Discord = require('discord.js');
+const { Op } = require('sequelize');
 const { Course, CourseTeam } = require('./db');
 const logger = require('./logging');
 
@@ -23,15 +24,18 @@ const courseSelectorActionRowFactory = (courseAction, courses) =>
 
 /**
  * @param {"join" | "leave"} courseTeamAction
- * @param {CourseTeam[]} courseTeams
+ * @param {CourseTeam[]} courseTeamsWithCourse
  */
-const courseTeamSelectorActionRowFactory = (courseTeamAction, courseTeams) =>
+const courseTeamSelectorActionRowFactory = (
+  courseTeamAction,
+  courseTeamsWithCourse
+) =>
   new Discord.MessageActionRow().addComponents(
     new Discord.MessageSelectMenu()
       .setCustomId(`course-team-${courseTeamAction}`)
       .setPlaceholder(`Select a team to ${courseTeamAction}`)
       .setOptions(
-        courseTeams.map((courseTeam) => ({
+        courseTeamsWithCourse.map((courseTeam) => ({
           label: `${courseTeam.title} (${courseTeam.Course.title})`,
           value: courseTeam.id.toString(),
         }))
@@ -82,13 +86,6 @@ async function addMemberToCourse(member, course) {
 /**
  *
  * @param {Discord.GuildMember} member
- * @param {Course} course
- */
-function removeMemberFromCourse(member, course) {}
-
-/**
- *
- * @param {Discord.GuildMember} member
  * @param {CourseTeam} courseTeam
  */
 async function addMemberToCourseTeam(member, courseTeam) {
@@ -116,7 +113,52 @@ async function addMemberToCourseTeam(member, courseTeam) {
  * @param {Discord.GuildMember} member
  * @param {CourseTeam} courseTeam
  */
-function removeMemberFromCourseTeam(member, courseTeam) {}
+async function removeMemberFromCourseTeam(member, courseTeam) {
+  const alreadyHasCourseTeamRole = member.roles.cache.some(
+    (role) => role.id === courseTeam.discordRoleId
+  );
+
+  await member.roles.remove(courseTeam.discordRoleId);
+
+  if (alreadyHasCourseTeamRole) {
+    try {
+      const channel = member.guild.channels.cache.get(
+        courseTeam.discordTextChannelId
+      );
+      await channel.send(`👋 Goodbye ${member}!`);
+    } catch (error) {
+      logger.error('Failed to send goodbye message to course team channel');
+      logger.error(error);
+    }
+  }
+}
+
+/**
+ *
+ * @param {Discord.GuildMember} member
+ * @param {Course} course
+ */
+async function removeMemberFromCourse(member, course) {
+  const memberDiscordRoleIds = member.roles.cache.map((role) => role.id);
+
+  // Attempt to add remove role
+  await member.roles.remove(course.discordRoleId);
+
+  // Leave all teams
+  const courseTeams = await CourseTeam.findAll({
+    where: {
+      discordRoleId: {
+        [Op.in]: memberDiscordRoleIds,
+      },
+    },
+  });
+
+  await Promise.allSettled(
+    courseTeams.map((courseTeam) =>
+      removeMemberFromCourseTeam(member, courseTeam)
+    )
+  );
+}
 
 /**
  * Splits a message into a command name and its arguments.

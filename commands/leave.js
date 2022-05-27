@@ -67,6 +67,7 @@ module.exports = {
             [Op.in]: memberRoleIds,
           },
         },
+        include: [{ model: Course, as: 'Course' }],
       });
 
       // Discord gets mad if we send a select menu with no options so we check for that

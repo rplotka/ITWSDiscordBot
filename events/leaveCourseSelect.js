@@ -1,12 +1,11 @@
 const {
-  Client,
   CommandInteraction,
   MessageActionRow,
   MessageSelectMenu,
 } = require('discord.js');
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
-const { addMemberToCourse } = require('../core/utils');
+const { removeMemberFromCourse } = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -18,16 +17,16 @@ module.exports = {
   async execute(interaction) {
     if (
       !interaction.isSelectMenu() ||
-      interaction.customId !== 'course-join' ||
+      interaction.customId !== 'course-leave' ||
       !interaction.values.length
     )
       return;
 
     const courseId = interaction.values[0];
 
-    logger.info(`${interaction.user} selected course ID ${courseId} to join`);
+    logger.info(`${interaction.user} selected course ID ${courseId} to leave`);
 
-    // Find course they want to join
+    // Find course they want to leave
     const course = await Course.findByPk(courseId);
 
     // Check if course exists
@@ -40,21 +39,11 @@ module.exports = {
       return;
     }
 
-    // Check if course is publicly joinable
-    if (!course.isPublic) {
-      await interaction.update({
-        content: '❌ You can only be added to that course by the instructor.',
-        components: [],
-        ephemeral: true,
-      });
-      return;
-    }
-
-    // Attemptto add them to course (also tries to send welcome message)
+    // Attempt to remove them from course
     try {
-      await addMemberToCourse(interaction.member, course);
+      await removeMemberFromCourse(interaction.member, course);
       logger.info(
-        `${interaction.member} joined course '${course.title}' (${course.id})`
+        `${interaction.member} left course '${course.title}' (${course.id}) and any teams`
       );
     } catch (error) {
       await interaction.update({
@@ -62,7 +51,7 @@ module.exports = {
         components: [],
       });
       logger.error(
-        `Failed to add ${interaction.member} to course '${course.title}' (${course.id})`
+        `Failed to remove ${interaction.member} from course '${course.title}' (${course.id})`
       );
       logger.error(error);
       return;
@@ -70,15 +59,8 @@ module.exports = {
 
     // Update status
     await interaction.update({
-      content: `🔓 You now have access to the private **${course.title}** channels.`,
+      content: `❎ You no longer access to the private **${course.title}** channels.`,
       components: [],
-      ephemeral: true,
-    });
-
-    // Send follow up message explaining how to join a team
-    await interaction.followUp({
-      content:
-        'ℹ️ If you want to join a course team now, use the `/join team` command!',
       ephemeral: true,
     });
   },

@@ -5,7 +5,7 @@ const {
 } = require('discord.js');
 const { CourseTeam, Course } = require('../core/db');
 const logger = require('../core/logging');
-const { addMemberToCourseTeam } = require('../core/utils');
+const { removeMemberFromCourseTeam } = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -17,25 +17,20 @@ module.exports = {
   async execute(interaction) {
     if (
       !interaction.isSelectMenu() ||
-      interaction.customId !== 'course-team-join' ||
+      interaction.customId !== 'course-team-leave' ||
       !interaction.values.length
     )
       return;
 
-    // Find course team they want to join
+    // Find course team they want to leave
     const courseTeamId = interaction.values[0];
 
     logger.info(
-      `${interaction.user} selected course team ID ${courseTeamId} to join`
+      `${interaction.user} selected course team ID ${courseTeamId} to leave`
     );
 
     const courseTeam = await CourseTeam.findByPk(courseTeamId, {
-      include: [
-        {
-          model: Course,
-          as: 'Course',
-        },
-      ],
+      include: [{ model: Course, as: 'Course' }],
     });
 
     // Check if course exists
@@ -50,23 +45,23 @@ module.exports = {
 
     // Attempt to add course team role (also tries to send welcome message)
     try {
-      await addMemberToCourseTeam(interaction.member, courseTeam);
+      await removeMemberFromCourseTeam(interaction.member, courseTeam);
     } catch (error) {
       await interaction.update({
         content:
-          '❌ Failed to add course team role. Please contact a Moderator on the server!',
+          '❌ Failed to remove course team role. Please contact a Moderator on the server!',
         components: [],
         ephemeral: true,
       });
       logger.error(
-        `Failed to add ${interaction.member} to course team '${courseTeam.title}' (${courseTeam.Course.title})`
+        `Failed to remove ${interaction.member} from course team '${courseTeam.title}' (${courseTeam.Course.title})`
       );
       logger.error(error);
       return;
     }
 
     await interaction.update({
-      content: `👥 You now have access to your team channels for **${courseTeam.title}** in course **${courseTeam.Course.title}**.`,
+      content: `❎ You no longer have access to the team channels for **${courseTeam.title}** in course **${courseTeam.Course.title}**.`,
       components: [],
       ephemeral: true,
     });

@@ -36,6 +36,7 @@ const roles = [
 module.exports = {
   name: 'guildMemberAdd',
   once: true,
+  disabled: true,
   /**
    * When a new user joins the server, ask what their role is.
    *
