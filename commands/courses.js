@@ -56,6 +56,7 @@ module.exports = {
 
     const row = courseSelectorActionRowFactory(courseAction, courses);
 
+    // Discord gets mad if we send a select menu with no options so we check for that
     if (courses.length === 0) {
       await interaction.reply({
         content:
@@ -67,6 +68,9 @@ module.exports = {
       return;
     }
 
+    // Send a message with a select menu of courses
+    // When selected, a new interaction will be fired with the custom ID specified
+    // Another event handler can pick this up and complete the joining or leaving of the course
     await interaction.reply({
       content: `Choose a course to **${courseAction}**.`,
       components: [row],

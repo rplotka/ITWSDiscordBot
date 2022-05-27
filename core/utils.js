@@ -3,17 +3,17 @@ const Discord = require('discord.js');
 const { Course } = require('./db');
 
 /**
+ * Finds the #general text channel for a particular course on a server (guild).
  *
+ * @param {Discord.Guild} guild
  * @param {Course} course
+ * @returns {Discord.GuildTextBasedChannel}
  */
-function createCourseMessageEmbed(course) {
-  const embed = new Discord.MessageEmbed()
-    .setColor('GREEN')
-    .setTitle(course.title)
-    .setDescription(`AKA ${course.shortTitle}`)
-    .addField('Instructors', course.instructors.join(', '));
-
-  return embed;
+function findCourseGeneralChannel(guild, course) {
+  const courseCategory = guild.channels.cache.get(course.discordCategoryId);
+  return courseCategory.children.find(
+    (child) => child.type === 'GUILD_TEXT' && child.name === 'general'
+  );
 }
 
 /**
@@ -73,7 +73,7 @@ async function toggleMemberRole(member, roleOrRoleId) {
 }
 
 module.exports = {
-  createCourseMessageEmbed,
+  findCourseGeneralChannel,
   parseCommandAndArgs,
   fetchMemberById,
   toggleMemberRole,

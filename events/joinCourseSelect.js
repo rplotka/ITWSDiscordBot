@@ -1,6 +1,7 @@
 const { Client, CommandInteraction } = require('discord.js');
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
+const { findCourseGeneralChannel } = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -54,6 +55,18 @@ module.exports = {
         ephemeral: true,
       });
       return;
+    }
+
+    try {
+      const courseGeneralChannel = findCourseGeneralChannel(
+        interaction.guild,
+        course
+      );
+
+      await courseGeneralChannel.send(`👋 Welcome ${interaction.member}!`);
+    } catch (error) {
+      logger.error('Failed to send welcome message to course #general channel');
+      logger.error(error);
     }
 
     await interaction.update({
