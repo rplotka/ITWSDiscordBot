@@ -17,6 +17,12 @@ The ITWS Discord bot manages the ITWS Discord server by managing courses' roles,
 
 `DISCORD_BOT_TOKEN` the *secret* bot token found on the Discord developer page for the bot
 
+### Running Locally
+
+```bash
+npm run dev
+```
+
 ---
 
 ### Course Discord Layout
