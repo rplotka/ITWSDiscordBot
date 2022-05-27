@@ -22,7 +22,7 @@ module.exports = {
       await command.execute(interaction);
     } catch (error) {
       logger.error(error);
-      await interaction.reply({
+      await interaction[interaction.replied ? 'followUp' : 'reply']({
         content: 'There was an error while executing this command!',
         ephemeral: true,
       });

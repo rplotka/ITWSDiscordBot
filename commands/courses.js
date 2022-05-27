@@ -1,53 +1,76 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { CommandInteraction } = require('discord.js');
+const {
+  CommandInteraction,
+  MessageActionRow,
+  MessageSelectMenu,
+} = require('discord.js');
 const { Course } = require('../core/db');
-const { createCourseMessageEmbed } = require('../core/utils');
+
+/**
+ * @param {"join" | "leave"} courseAction
+ * @param {Course[]} courses
+ */
+const courseSelectorActionRowFactory = (courseAction, courses) =>
+  new MessageActionRow().addComponents(
+    new MessageSelectMenu()
+      .setCustomId(`course-${courseAction}`)
+      .setPlaceholder('Select a course')
+      .setOptions(
+        courses.map((course) => ({
+          label: course.title,
+          description: `Instructed by ${course.instructors.join(', ')}`,
+          value: course.id.toString(),
+        }))
+      )
+  );
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('courses')
-    .setDescription('Manage your courses.')
-    .addSubcommand((subcommand) =>
-      subcommand.setName('list').setDescription('List the available courses')
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('join')
-        .setDescription('Join a course')
-        .addStringOption((option) =>
-          option
-            .setName('course')
-            .setDescription('ID or title of the course to join')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName('leave')
-        .setDescription('Leave a course')
-        .addStringOption((option) =>
-          option
-            .setName('course')
-            .setDescription('ID or title of the course to leave')
-            .setRequired(true)
-        )
+    .setDescription('Join/leave courses.')
+    .addSubcommand((sc) => sc.setName('join').setDescription('Join a course'))
+    .addSubcommand((sc) =>
+      sc.setName('leave').setDescription('Leave a course')
     ),
   /**
    * @param {CommandInteraction} interaction
    */
   async execute(interaction) {
-    const subcommand = interaction.options.getSubcommand();
+    let courses = await Course.findAll();
 
-    const courses = await Course.findAll();
+    const courseAction = interaction.options.getSubcommand(); // "join" or "leave"
 
-    // Check if users want to list, join, or leave a course
-    if (subcommand === 'list') {
-      interaction.reply({
+    const memberRoleIds = interaction.member.roles.cache.map((role) => role.id);
+
+    if (courseAction === 'join') {
+      // Filter to only show courses not joined
+      courses = courses.filter(
+        (course) => !memberRoleIds.includes(course.discordRoleId)
+      );
+    } else {
+      // Filter to only show courses currently joined
+      courses = courses.filter((course) =>
+        memberRoleIds.includes(course.discordRoleId)
+      );
+    }
+
+    const row = courseSelectorActionRowFactory(courseAction, courses);
+
+    if (courses.length === 0) {
+      await interaction.reply({
         content:
-          'Here are the current courses. You can join them with `/courses join coursename`.',
-        embeds: courses.map(createCourseMessageEmbed),
+          courseAction === 'join'
+            ? 'There are no other courses to join.'
+            : 'You are not in any courses currently.',
         ephemeral: true,
       });
+      return;
     }
+
+    await interaction.reply({
+      content: `Choose a course to **${courseAction}**.`,
+      components: [row],
+      ephemeral: true,
+    });
   },
 };
