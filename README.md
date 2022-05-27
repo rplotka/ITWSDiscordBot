@@ -9,18 +9,35 @@ The ITWS Discord bot manages the ITWS Discord server by managing courses' roles,
 
 ## Commands
 
+Check out the `commands/` folder for all of the available commands. In the object that each exports is a name, description, and details of subcommands with descriptions.
 
+- /join course
+- /join team
+- /leave course
+- /leave team
 
 ## Development
 
 ### Environment Variables
 
-`DISCORD_BOT_TOKEN` the *secret* bot token found on the Discord developer page for the bot
+Copy over `.env.example` to `.env` and populate all of the values.
+
+**Hints:**
+
+- `DISCORD_BOT_TOKEN` the *secret* bot token found on the Discord developer page for the bot
 
 ### Running Locally
 
 ```bash
 npm run dev
+```
+
+#### Deploying Slash Commands
+
+Anytime the name, descriptions, subcommands, etc. of any commands change, the changes must be deployed to Discord to be reflected in the Discord UI.
+
+```bash
+npm run deploy-commands
 ```
 
 ---
