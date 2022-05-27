@@ -1,5 +1,20 @@
 // eslint-disable-next-line no-unused-vars
 const Discord = require('discord.js');
+const { Course } = require('./db');
+
+/**
+ *
+ * @param {Course} course
+ */
+function createCourseMessageEmbed(course) {
+  const embed = new Discord.MessageEmbed()
+    .setColor('GREEN')
+    .setTitle(course.title)
+    .setDescription(`AKA ${course.shortTitle}`)
+    .addField('Instructors', course.instructors.join(', '));
+
+  return embed;
+}
 
 /**
  * Splits a message into a command name and its arguments.
@@ -58,6 +73,7 @@ async function toggleMemberRole(member, roleOrRoleId) {
 }
 
 module.exports = {
+  createCourseMessageEmbed,
   parseCommandAndArgs,
   fetchMemberById,
   toggleMemberRole,
