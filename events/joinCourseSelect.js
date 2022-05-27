@@ -1,7 +1,37 @@
-const { Client, CommandInteraction } = require('discord.js');
-const { Course } = require('../core/db');
+const {
+  Client,
+  CommandInteraction,
+  MessageActionRow,
+  MessageSelectMenu,
+} = require('discord.js');
+const { Course, CourseTeam } = require('../core/db');
 const logger = require('../core/logging');
-const { findCourseGeneralChannel } = require('../core/utils');
+const {
+  findCourseGeneralChannel,
+  addMemberToCourse,
+} = require('../core/utils');
+
+/**
+ * @param {Course} course
+ * @param {CourseTeam[]} courseTeams
+ */
+const courseTeamSelectorActionRowFactory = (course, courseTeams) =>
+  new MessageActionRow().addComponents(
+    new MessageSelectMenu()
+      .setCustomId(`course-team-join`)
+      .setPlaceholder(`Select a team to join for ${course.title}`)
+      .setOptions([
+        {
+          label: 'No Team',
+          description: 'Do not join a team for now.',
+          value: 'no team',
+        },
+        ...courseTeams.map((courseTeam) => ({
+          label: courseTeam.title,
+          value: courseTeam.id.toString(),
+        })),
+      ])
+  );
 
 module.exports = {
   name: 'interactionCreate',
@@ -28,7 +58,7 @@ module.exports = {
     if (!course) {
       await interaction.update({
         components: [],
-        content: 'Course not found.',
+        content: '❌ Course not found.',
         ephemeral: true,
       });
       return;
@@ -37,20 +67,7 @@ module.exports = {
     // Check if course is publicly joinable
     if (!course.isPublic) {
       await interaction.update({
-        content: 'You can only be added to that course by the instructor.',
-        components: [],
-        ephemeral: true,
-      });
-      return;
-    }
-
-    // Attempt to add course roles
-    try {
-      await interaction.member.roles.add(course.discordRoleId);
-    } catch (e) {
-      await interaction.update({
-        content:
-          'Failed to add course role. Please contact a Moderator on the server!',
+        content: '❌ You can only be added to that course by the instructor.',
         components: [],
         ephemeral: true,
       });
@@ -58,21 +75,26 @@ module.exports = {
     }
 
     try {
-      const courseGeneralChannel = findCourseGeneralChannel(
-        interaction.guild,
-        course
-      );
-
-      await courseGeneralChannel.send(`👋 Welcome ${interaction.member}!`);
+      await addMemberToCourse(interaction.member, course);
     } catch (error) {
-      logger.error('Failed to send welcome message to course #general channel');
+      await interaction.update({
+        content: '❌ Something went wrong... Please contact a Moderator!',
+        components: [],
+      });
+      logger.error('Failed to add member to course');
       logger.error(error);
+      return;
     }
 
     await interaction.update({
-      content: `You now have access to **${course.title}** on this server. Check out #general.`,
+      content: `🔓 You now have access to the private **${course.title}** channels.`,
       components: [],
       ephemeral: true,
+    });
+
+    await interaction.followUp({
+      content:
+        'ℹ️ If you want to join a course team now, use the `/join team` command!',
     });
   },
 };
