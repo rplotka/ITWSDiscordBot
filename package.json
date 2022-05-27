@@ -4,10 +4,16 @@
   "description": "Discord bot that manages the RPI ITWS Discord server.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js | pino-pretty",
+    "start": "nodemon index.js",
+    "dev": "nodemon index.js | pino-pretty",
     "deploy-commands": "node deploy-commands.js",
     "test": "ava"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "test.js",
+      "deploy-commands.js"
+    ]
   },
   "author": "Simar Singh",
   "license": "ISC",
@@ -30,6 +36,7 @@
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.26.0",
+    "nodemon": "^2.0.16",
     "prettier": "^2.6.2"
   }
 }
