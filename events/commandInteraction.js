@@ -1,5 +1,6 @@
 const { CommandInteraction } = require('discord.js');
 const logger = require('../core/logging');
+const { isModeratorOrAbove } = require('../core/permissions');
 
 module.exports = {
   name: 'interactionCreate',
@@ -14,6 +15,19 @@ module.exports = {
     const command = interaction.client.commands.get(interaction.commandName);
 
     if (!command) return;
+
+    // Check permissions
+    if (command.isModeratorOnly) {
+      try {
+        await isModeratorOrAbove(interaction.member);
+      } catch (error) {
+        await interaction.reply({
+          content: '❌ Only moderators can run that command!',
+          ephemeral: true,
+        });
+        return;
+      }
+    }
 
     try {
       logger.info(
