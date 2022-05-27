@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "dev": "node index.js | pino-pretty",
+    "deploy-commands": "node deploy-commands.js",
     "test": "ava"
   },
   "author": "Simar Singh",
