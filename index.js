@@ -29,9 +29,9 @@ eventFiles.forEach((file) => {
     );
   }
 
-  client[event.once ? 'once' : 'on'](event.name, (...args) => {
+  client[event.once ? 'once' : 'on'](event.name, async (...args) => {
     try {
-      event.execute(...args);
+      await event.execute(...args);
     } catch (error) {
       logger.error(
         `An error occurred when the event lister for event '${event.name}' in file 'events/${file}'`

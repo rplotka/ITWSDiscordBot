@@ -83,6 +83,8 @@ module.exports = {
     )
       return;
 
+    interaction.deferReply({ ephemeral: true });
+
     logger.info(`${interaction.member} submited the new course modal`);
 
     const val = (fieldName) => interaction.fields.getTextInputValue(fieldName);
@@ -115,6 +117,10 @@ module.exports = {
         `Failed to create course roles for new course '${newCourse.title}'`
       );
       logger.error(error);
+      await interaction.editReply({
+        ephemeral: true,
+        content: `❌ Something went wrong... Please contact a Moderator!`,
+      });
       return;
     }
 
@@ -125,6 +131,10 @@ module.exports = {
         `Failed to create course channels for new course '${newCourse.title}'`
       );
       logger.error(error);
+      await interaction.editReply({
+        ephemeral: true,
+        content: `❌ Something went wrong... Please contact a Moderator!`,
+      });
       return;
     }
 
@@ -135,11 +145,16 @@ module.exports = {
         'Created course Discord roles and channels but failed to save Course in DB...'
       );
       logger.error(error);
+      await interaction.editReply({
+        ephemeral: true,
+        content: `❌ Something went wrong... Please contact a Moderator!`,
+      });
+      return;
     }
 
     await interaction.reply({
       ephemeral: true,
-      content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
+      content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
     });
   },
 };

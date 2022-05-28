@@ -22,12 +22,14 @@ module.exports = {
 
     logger.info(`${interaction.user} selected course ID ${courseId} to REMOVE`);
 
+    await interaction.deferReply({ ephemeral: true });
+
     // Find course they want to REMOVE
     const course = await Course.findByPk(courseId);
 
     // Check if course exists
     if (!course) {
-      await interaction.update({
+      await interaction.editReply({
         components: [],
         content: '❌ Course not found.',
         ephemeral: true,
@@ -38,8 +40,11 @@ module.exports = {
     // Attempt to remove course and all data
     try {
       await removeCourse(interaction.guild, course);
+      logger.info(
+        `Successfully removed course '${course.title}' (${course.id})`
+      );
     } catch (error) {
-      await interaction.update({
+      await interaction.editReply({
         content: '❌ Something went wrong... Please contact a Moderator!',
         components: [],
       });
@@ -49,7 +54,7 @@ module.exports = {
     }
 
     // Update status
-    await interaction.update({
+    await interaction.editReply({
       content: `❎ You have **removed** **${course.title}** along with its roles and channels.`,
       components: [],
       ephemeral: true,
