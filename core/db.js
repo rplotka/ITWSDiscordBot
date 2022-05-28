@@ -61,13 +61,6 @@ const CourseTeam = sequelize.define('CourseTeam', {
   },
 });
 
-const CourseEnrollment = sequelize.define('CourseEnrollment', {
-  studentRcsId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-});
-
 const Group = sequelize.define('Group', {
   title: {
     type: DataTypes.STRING,
@@ -97,13 +90,6 @@ const Group = sequelize.define('Group', {
 
 // Associations
 // https://sequelize.org/master/manual/assocs.html
-Course.hasMany(CourseEnrollment, {
-  foreignKey: {
-    allowNull: false,
-  },
-});
-CourseEnrollment.belongsTo(Course);
-CourseEnrollment.belongsTo(CourseTeam);
 Course.hasMany(CourseTeam, {
   foreignKey: {
     allowNull: false,
@@ -128,7 +114,6 @@ sequelize
 
 module.exports = {
   Course,
-  CourseEnrollment,
   CourseTeam,
   Group,
 };
