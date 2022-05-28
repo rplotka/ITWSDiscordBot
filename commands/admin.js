@@ -6,7 +6,11 @@ const {
 } = require('discord.js');
 const logger = require('../core/logging');
 const { userRoles } = require('../core/constants');
-const { addCourseModalFactory } = require('../core/utils');
+const {
+  addCourseModalFactory,
+  courseSelectorActionRowFactory,
+} = require('../core/utils');
+const { Course, CourseTeam } = require('../core/db');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -58,6 +62,30 @@ module.exports = {
 
     if (subcommandGroup === 'courses' && subcommand === 'add') {
       await interaction.showModal(addCourseModalFactory());
+    } else if (subcommandGroup === 'courses' && subcommand === 'remove') {
+      // Generate list of courses
+      const courses = await Course.findAll({
+        include: [{ model: CourseTeam, as: 'CourseTeams' }],
+      });
+      const row = courseSelectorActionRowFactory('remove', courses);
+
+      // Discord gets mad if we send a select menu with no options so we check for that
+      if (courses.length === 0) {
+        await interaction.reply({
+          content: 'ℹ️ There are no courses to remove.',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Send a message with a select menu of courses
+      // When selected, a new interaction will be fired with the custom ID specified
+      // Another event handler can pick this up and complete the joining or leaving of the course
+      await interaction.reply({
+        content: `❔ Choose a course to **remove**. Note that this will lose message history.`,
+        components: [row],
+        ephemeral: true,
+      });
     } else {
       await interaction.reply({
         ephemeral: true,

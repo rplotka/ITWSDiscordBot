@@ -66,7 +66,7 @@ const addCourseModalFactory = () => {
 };
 
 /**
- * @param {"join" | "leave"} courseAction
+ * @param {"join" | "leave" | "remove"} courseAction
  * @param {Course[]} courses
  */
 const courseSelectorActionRowFactory = (courseAction, courses) =>
