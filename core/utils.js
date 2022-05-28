@@ -28,23 +28,25 @@ const addCourseModalFactory = () => {
     .setRequired(true)
     .setStyle('SHORT');
 
-  const isPublicInput = new Discord.MessageSelectMenu()
-    .setCustomId('add-course-modal-is-public')
-    .setPlaceholder('Can students freely join?')
-    .setOptions([
-      {
-        label: 'Publicly Joinable',
-        value: 'yes',
-        description: 'Students can join via `/join course`',
-        emoji: '🔓',
-      },
-      {
-        label: 'Locked',
-        value: 'no',
-        description: 'Students can only be added by instructors',
-        emoji: '🔒',
-      },
-    ]);
+  // Discord does not yet appear to support select menus in modals
+
+  // const isPublicInput = new Discord.MessageSelectMenu()
+  //   .setCustomId('add-course-modal-is-public')
+  //   .setPlaceholder('Can students freely join?')
+  //   .setOptions([
+  //     {
+  //       label: 'Publicly Joinable',
+  //       value: 'yes',
+  //       description: 'Students can join via `/join course`',
+  //       emoji: '🔓',
+  //     },
+  //     {
+  //       label: 'Locked',
+  //       value: 'no',
+  //       description: 'Students can only be added by instructors',
+  //       emoji: '🔒',
+  //     },
+  //   ]);
 
   const instructorsInput = new Discord.TextInputComponent()
     .setCustomId('add-course-modal-instructors')
@@ -56,9 +58,9 @@ const addCourseModalFactory = () => {
   const row1 = new Discord.MessageActionRow().addComponents(titleInput);
   const row2 = new Discord.MessageActionRow().addComponents(shortTitleInput);
   const row3 = new Discord.MessageActionRow().addComponents(instructorsInput);
-  const row4 = new Discord.MessageActionRow().addComponents(isPublicInput);
+  // const row4 = new Discord.MessageActionRow().addComponents(isPublicInput);
 
-  modal.addComponents(row1, row2, row3, row4);
+  modal.addComponents(row1, row2, row3);
 
   return modal;
 };
