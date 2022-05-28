@@ -70,15 +70,8 @@ module.exports = {
 
     // Update status
     await interaction.update({
-      content: `🔓 You now have access to the private **${course.title}** channels.`,
+      content: `🔓 You now have access to the private **${course.title}** channels.\n\nℹ️ If you want to join a course team now, use the \`/join team\` command!`,
       components: [],
-      ephemeral: true,
-    });
-
-    // Send follow up message explaining how to join a team
-    await interaction.followUp({
-      content:
-        'ℹ️ If you want to join a course team now, use the `/join team` command!',
       ephemeral: true,
     });
   },
