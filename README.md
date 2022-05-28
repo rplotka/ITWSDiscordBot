@@ -15,12 +15,18 @@ Check out the `commands/` folder for all of the available commands. In the objec
 - /join team
 - /leave course
 - /leave team
+- /test
+- /admin courses add
+- /admin courses add-teams
+- /admin courses remove
+- /admin courses remove-teams
+- /admin courses clear
 
 ## Development
 
 ### Environment Variables
 
-Copy over `.env.example` to `.env` and populate all of the values.
+Copy over `.env.example` to `.env` and populate all of the values. You'll probably have to ask a previous/current developer for a copy.
 
 **Hints:**
 
