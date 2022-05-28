@@ -4,6 +4,65 @@ const { Op } = require('sequelize');
 const { Course, CourseTeam } = require('./db');
 const logger = require('./logging');
 
+const addCourseModalFactory = () => {
+  const modal = new Discord.Modal()
+    .setCustomId('add-course-modal')
+    .setTitle('Add Course');
+
+  // Add inputs for DB fields
+  // - title
+  // - shortTitle
+  // - isPublic
+  // - instructors
+
+  const titleInput = new Discord.TextInputComponent()
+    .setCustomId('add-course-modal-title')
+    .setLabel("What's the FULL name of the course?")
+    .setRequired(true)
+    .setStyle('SHORT');
+
+  const shortTitleInput = new Discord.TextInputComponent()
+    .setCustomId('add-course-modal-short-title')
+    .setLabel("What's the SHORT name of the course?")
+    .setPlaceholder('e.g. intro, mitr, capstone')
+    .setRequired(true)
+    .setStyle('SHORT');
+
+  const isPublicInput = new Discord.MessageSelectMenu()
+    .setCustomId('add-course-modal-is-public')
+    .setPlaceholder('Can students freely join?')
+    .setOptions([
+      {
+        label: 'Publicly Joinable',
+        value: 'yes',
+        description: 'Students can join via `/join course`',
+        emoji: '🔓',
+      },
+      {
+        label: 'Locked',
+        value: 'no',
+        description: 'Students can only be added by instructors',
+        emoji: '🔒',
+      },
+    ]);
+
+  const instructorsInput = new Discord.TextInputComponent()
+    .setCustomId('add-course-modal-instructors')
+    .setLabel('Who is instructing the course?')
+    .setPlaceholder('Comma-separated list of instructor RCS IDs')
+    .setRequired(true)
+    .setStyle('SHORT');
+
+  const row1 = new Discord.MessageActionRow().addComponents(titleInput);
+  const row2 = new Discord.MessageActionRow().addComponents(shortTitleInput);
+  const row3 = new Discord.MessageActionRow().addComponents(instructorsInput);
+  const row4 = new Discord.MessageActionRow().addComponents(isPublicInput);
+
+  modal.addComponents(row1, row2, row3, row4);
+
+  return modal;
+};
+
 /**
  * @param {"join" | "leave"} courseAction
  * @param {Course[]} courses
@@ -217,6 +276,7 @@ async function toggleMemberRole(member, roleOrRoleId) {
 }
 
 module.exports = {
+  addCourseModalFactory,
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,
   addMemberToCourse,
