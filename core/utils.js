@@ -222,6 +222,80 @@ async function removeMemberFromCourse(member, course) {
 }
 
 /**
+ *
+ * @param {Discord.Guild} guild
+ * @param {Course} course
+ */
+async function removeCourse(guild, course) {
+  // Delete team roles and channels
+  const courseTeams = await CourseTeam.findAll({
+    where: {
+      CourseId: course.id,
+    },
+  });
+
+  await Promise.all(
+    courseTeams.map((courseTeam) =>
+      Promise.allSettled([
+        // Delete role
+        guild.roles.delete(courseTeam.discordRoleId, 'Course being removed'),
+        // Delete text channel
+        guild.channels.delete(
+          courseTeam.discordTextChannelId,
+          'Course being removed'
+        ),
+        // Delete voice channel
+        guild.channels.delete(
+          courseTeam.discordVoiceChannelId,
+          'Course being removed'
+        ),
+        courseTeam.destroy(),
+      ])
+    )
+  );
+
+  // Delete course category and children
+  if (course.discordCategoryId) {
+    try {
+      // Delete children first!!!!
+      await Promise.all(
+        guild.channels.cache
+          .filter(
+            (channel) =>
+              channel.parent && channel.parent.id === course.discordCategoryId
+          )
+          .map((childChannel) => childChannel.delete('Course being removed'))
+      );
+
+      await guild.channels.delete(
+        course.discordCategoryId,
+        'Course being removed'
+      );
+    } catch (error) {
+      logger.warn(
+        `Failed to delete Discord category and/or children channels for course '${course.title}' (${course.id})`
+      );
+      logger.warn(error);
+    }
+  }
+
+  // Delete course role
+  if (course.discordRoleId) {
+    try {
+      await guild.roles.delete(course.discordRoleId, 'Course being removed');
+    } catch (error) {
+      logger.warn(
+        `Failed to delete Discord role for course '${course.title}' (${course.id})`
+      );
+      logger.warn(error);
+    }
+  }
+
+  // Finally, delete the DB record
+  await course.destroy();
+}
+
+/**
  * Splits a message into a command name and its arguments.
  * Assumes that the command prefix has already been removed.
  * The command name is lowercased. It treats arguments in
@@ -278,6 +352,7 @@ async function toggleMemberRole(member, roleOrRoleId) {
 }
 
 module.exports = {
+  removeCourse,
   addCourseModalFactory,
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,
