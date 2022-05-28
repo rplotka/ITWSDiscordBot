@@ -291,6 +291,21 @@ async function removeCourse(guild, course) {
     }
   }
 
+  // Delete course instructor role
+  if (course.discordInstructorRoleId) {
+    try {
+      await guild.roles.delete(
+        course.discordInstructorRoleId,
+        'Course being removed'
+      );
+    } catch (error) {
+      logger.warn(
+        `Failed to delete Discord instructor role for course '${course.title}' (${course.id})`
+      );
+      logger.warn(error);
+    }
+  }
+
   // Finally, delete the DB record
   await course.destroy();
 }
