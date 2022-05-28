@@ -5,16 +5,19 @@ module.exports.userRoles = [
   {
     label: 'Prospective Students',
     customId: 'prospective',
-    discordRoleId: '902669004081074237',
+    discordRoleId: process.env.DISCORD_PROSPECTIVE_STUDENTS_ROLE_ID,
   },
   {
     label: 'Accepted Students',
     customId: 'accepted',
     discordRoleId: '812420665487392818',
   },
-  // {
-  //   label: 'Alumni',
-  //   customId: 'alumni',
-  //   discordRoleId: '763956900478844999',
-  // },
+  {
+    label: 'Current Students',
+    url: 'https://itws-discord.herokuapp.com/',
+  },
+  {
+    label: 'Alumni',
+    url: 'https://forms.gle/DisKuZy4AJf17pk69',
+  },
 ];

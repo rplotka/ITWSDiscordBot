@@ -9,13 +9,21 @@ const { userRoles } = require('../core/constants');
 
 const roleButtonsMessageActionRowFactory = (userRoles) =>
   new MessageActionRow().addComponents(
-    userRoles.map((userRole) =>
-      new MessageButton()
-        .setCustomId(`set-role-${userRole.customId}`)
+    userRoles.map((userRole) => {
+      if (userRole.customId) {
+        return new MessageButton()
+          .setCustomId(`set-role-${userRole.customId}`)
+          .setLabel(userRole.label)
+          .setStyle('PRIMARY');
+      }
+
+      return new MessageButton()
+        .setURL(userRole.url)
         .setLabel(userRole.label)
-        .setStyle('PRIMARY')
-    )
+        .setStyle('LINK');
+    })
   );
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('test')
@@ -42,6 +50,5 @@ module.exports = {
         '**Please select a role below in order to gain access to the server.**',
       components: [row],
     });
-    await interaction.deleteReply();
   },
 };

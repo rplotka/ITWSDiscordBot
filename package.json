@@ -11,8 +11,8 @@
   },
   "nodemonConfig": {
     "ignore": [
-      "test.js",
-      "deploy-commands.js"
+      "./test.js",
+      "./deploy-commands.js"
     ]
   },
   "author": "Simar Singh",
