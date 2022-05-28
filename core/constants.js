@@ -5,16 +5,16 @@ module.exports.userRoles = [
   {
     label: 'Prospective Students',
     customId: 'prospective',
-    discordRoleId: '979889951594381382',
+    discordRoleId: '902669004081074237',
   },
   {
     label: 'Accepted Students',
     customId: 'accepted',
-    discordRoleId: '979874983650148382',
+    discordRoleId: '812420665487392818',
   },
-  {
-    label: 'Alumni',
-    customId: 'alumni',
-    discordRoleId: '979874881481089084',
-  },
+  // {
+  //   label: 'Alumni',
+  //   customId: 'alumni',
+  //   discordRoleId: '763956900478844999',
+  // },
 ];
