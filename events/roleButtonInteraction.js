@@ -9,31 +9,30 @@ module.exports = {
    * @param {ButtonInteraction} interaction
    */
   async execute(interaction) {
-    const roleCustomIds = userRoles.map(
-      (userRole) => `set-role-${userRole.customId}`
-    );
-    if (
-      !interaction.isButton() ||
-      !roleCustomIds.includes(interaction.customId)
-    )
-      return;
-
-    logger.info(
-      `${interaction.member} selected role '${interaction.customId}'`
+    const userRole = userRoles.find(
+      (uR) => `set-role-${uR.customId}` === interaction.customId
     );
 
-    interaction.reply({
-      content: `You've been marked as a **${interaction.customId}**`,
+    if (!interaction.isButton() || !userRole) return;
+
+    logger.info(`${interaction.member} selected role '${userRole.customId}'`);
+
+    await interaction.reply({
+      content: `You've been added to **${userRole.label}**`,
       ephemeral: true,
     });
 
-    // Add desired role and remove others
-    userRoles.forEach((userRole) => {
-      if (interaction.customId === `set-role-${userRole.customId}`) {
-        interaction.member.roles.add(userRole.discordRoleId);
-      } else {
-        interaction.member.roles.remove(userRole.discordRoleId);
-      }
-    });
+    // Add desired role
+    await interaction.member.roles.add(userRole.discordRoleId);
+
+    // Remove other roles
+    await Promise.allSettled(
+      userRoles.map(async (uR) => {
+        if (uR.customId !== userRole.customId && uR.discordRoleId) {
+          return interaction.member.roles.remove(uR.discordRoleId);
+        }
+        return null;
+      })
+    );
   },
 };

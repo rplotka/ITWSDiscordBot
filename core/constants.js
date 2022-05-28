@@ -10,7 +10,7 @@ module.exports.userRoles = [
   {
     label: 'Accepted Students',
     customId: 'accepted',
-    discordRoleId: '812420665487392818',
+    discordRoleId: process.env.DISCORD_ACCEPTED_STUDENTS_ROLE_ID,
   },
   {
     label: 'Current Students',
