@@ -22,6 +22,8 @@ module.exports = {
     )
       return;
 
+    await interaction.deferUpdate({ ephemeral: true });
+
     const courseId = interaction.values[0];
 
     logger.info(`${interaction.user} selected course ID ${courseId} to leave`);
@@ -31,7 +33,7 @@ module.exports = {
 
     // Check if course exists
     if (!course) {
-      await interaction.update({
+      await interaction.editReply({
         components: [],
         content: '❌ Course not found.',
         ephemeral: true,
@@ -46,7 +48,7 @@ module.exports = {
         `${interaction.member} left course '${course.title}' (${course.id}) and any teams`
       );
     } catch (error) {
-      await interaction.update({
+      await interaction.editReply({
         content: '❌ Something went wrong... Please contact a Moderator!',
         components: [],
       });
@@ -58,7 +60,7 @@ module.exports = {
     }
 
     // Update status
-    await interaction.update({
+    await interaction.editReply({
       content: `❎ You no longer access to the private **${course.title}** channels.`,
       components: [],
       ephemeral: true,

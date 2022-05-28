@@ -23,6 +23,8 @@ module.exports = {
     )
       return;
 
+    await interaction.deferUpdate({ ephemeral: true });
+
     const courseId = interaction.values[0];
 
     logger.info(`${interaction.user} selected course ID ${courseId} to join`);
@@ -32,7 +34,7 @@ module.exports = {
 
     // Check if course exists
     if (!course) {
-      await interaction.update({
+      await interaction.editReply({
         components: [],
         content: '❌ Course not found.',
         ephemeral: true,
@@ -42,7 +44,7 @@ module.exports = {
 
     // Check if course is publicly joinable
     if (!course.isPublic) {
-      await interaction.update({
+      await interaction.editReply({
         content: '❌ You can only be added to that course by the instructor.',
         components: [],
         ephemeral: true,
@@ -57,7 +59,7 @@ module.exports = {
         `${interaction.member} joined course '${course.title}' (${course.id})`
       );
     } catch (error) {
-      await interaction.update({
+      await interaction.editReply({
         content: '❌ Something went wrong... Please contact a Moderator!',
         components: [],
       });
@@ -69,7 +71,7 @@ module.exports = {
     }
 
     // Update status
-    await interaction.update({
+    await interaction.editReply({
       content: `🔓 You now have access to the private **${course.title}** channels.\n\nℹ️ If you want to join a course team now, use the \`/join team\` command!`,
       components: [],
       ephemeral: true,

@@ -22,6 +22,8 @@ module.exports = {
     )
       return;
 
+    await interaction.deferUpdate({ ephemeral: true });
+
     // Find course team they want to join
     const courseTeamId = interaction.values[0];
 
@@ -40,7 +42,7 @@ module.exports = {
 
     // Check if course exists
     if (!courseTeam) {
-      await interaction.update({
+      await interaction.editReply({
         components: [],
         content: '❌ Course team not found.',
         ephemeral: true,
@@ -52,7 +54,7 @@ module.exports = {
     try {
       await addMemberToCourseTeam(interaction.member, courseTeam);
     } catch (error) {
-      await interaction.update({
+      await interaction.editReply({
         content:
           '❌ Failed to add course team role. Please contact a Moderator on the server!',
         components: [],
@@ -65,7 +67,7 @@ module.exports = {
       return;
     }
 
-    await interaction.update({
+    await interaction.editReply({
       content: `👥 You now have access to your team channels for **${courseTeam.title}** in course **${courseTeam.Course.title}**.`,
       components: [],
       ephemeral: true,
