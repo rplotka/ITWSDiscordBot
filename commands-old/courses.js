@@ -45,13 +45,6 @@ async function findCourse(courseIdentifier) {
   return course;
 }
 
-async function findCourseGeneralChannel(server, course) {
-  const courseCategory = await server.channels.cache.get(
-    course.discordCategoryId
-  );
-  return courseCategory.children.find((child) => child.name === 'general');
-}
-
 module.exports = {
   name: 'courses',
   description: 'Manage courses with their categories, channels, and roles.',

@@ -1,36 +1,95 @@
-const { Course } = require('../core/db');
-const { findCourse } = require('./courses');
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const {
+  CommandInteraction,
+  MessageActionRow,
+  MessageSelectMenu,
+} = require('discord.js');
+const { Op } = require('sequelize');
+const { Course, CourseTeam } = require('../core/db');
+const logger = require('../core/logging');
+const {
+  courseSelectorActionRowFactory,
+  courseTeamSelectorActionRowFactory,
+} = require('../core/utils');
 
 module.exports = {
-  name: 'leave',
-  description: 'Leave courses',
-  usages: {
-    'leave <course title/short title>': 'Leave a course',
-  },
-  examples: ['leave Intro', 'leave Capstone', 'leave MITR'],
-  async execute(message, member, args) {
-    if (args.length === 0) {
-      const courses = await Course.findAll();
-      const messageLines = [
-        '**Available Courses**',
-        ...courses.map((c) => `${c.title} \`(${c.shortTitle})\``),
-      ];
-      message.channel.send(messageLines.join('\n'), { split: true });
-      return;
-    }
-    const courseIdentifier = args[0];
+  data: new SlashCommandBuilder()
+    .setName('leave')
+    .setDescription('Leave a course or a course team.')
+    .addSubcommand((sc) =>
+      sc.setName('course').setDescription('Leave a course you are currently in')
+    )
+    .addSubcommand((sc) =>
+      sc
+        .setName('team')
+        .setDescription('Leave a course team you are currently in')
+    ),
+  /**
+   * @param {CommandInteraction} interaction
+   */
+  async execute(interaction) {
+    const target = interaction.options.getSubcommand(); // "course" or "team"
 
-    const course = await findCourse(courseIdentifier);
-    if (!course) {
-      await message.reply('Course not found.');
-      return;
-    }
+    const memberRoleIds = interaction.member.roles.cache.map((role) => role.id);
 
-    try {
-      await message.member.roles.remove(course.discordRoleId);
-      await message.reply('Removed role!');
-    } catch (e) {
-      await message.reply('Failed to remove role...');
+    if (target === 'course') {
+      const courses = await Course.findAll({
+        where: {
+          discordRoleId: {
+            [Op.in]: memberRoleIds,
+          },
+        },
+      });
+      const row = courseSelectorActionRowFactory('leave', courses);
+
+      // Discord gets mad if we send a select menu with no options so we check for that
+      if (courses.length === 0) {
+        await interaction.reply({
+          content: 'ℹ️ You are not in any courses.',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Send a message with a select menu of courses
+      // When selected, a new interaction will be fired with the custom ID specified
+      // Another event handler can pick this up and complete the joining or leaving of the course
+      await interaction.reply({
+        content: `❔ Choose a course to **leave**.`,
+        components: [row],
+        ephemeral: true,
+      });
+    } else if (target === 'team') {
+      // Find the course teams that are for the courses the member is in and aren't currently in
+      const courseTeams = await CourseTeam.findAll({
+        where: {
+          discordRoleId: {
+            [Op.in]: memberRoleIds,
+          },
+        },
+        include: [{ model: Course, as: 'Course' }],
+      });
+
+      // Discord gets mad if we send a select menu with no options so we check for that
+      if (courseTeams.length === 0) {
+        await interaction.reply({
+          content: 'ℹ️ You are not in any course teams.',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Generate select menu of these teams
+      const row = courseTeamSelectorActionRowFactory('leave', courseTeams);
+
+      // Send a message with a select menu of course teams
+      // When selected, a new interaction will be fired with the custom ID specified
+      // Another event handler can pick this up and complete the joining or leaving of the course team
+      await interaction.reply({
+        content: `❔ Choose a course team to **leave**.`,
+        components: [row],
+        ephemeral: true,
+      });
     }
   },
 };

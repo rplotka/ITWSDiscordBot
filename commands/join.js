@@ -1,104 +1,103 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const {
+  CommandInteraction,
+  MessageActionRow,
+  MessageSelectMenu,
+} = require('discord.js');
 const { Op } = require('sequelize');
-const logger = require('../core/logging').child({ from: 'join' });
 const { Course, CourseTeam } = require('../core/db');
-const { findCourse, findCourseGeneralChannel } = require('./courses');
+const logger = require('../core/logging');
+const {
+  courseSelectorActionRowFactory,
+  courseTeamSelectorActionRowFactory,
+} = require('../core/utils');
 
 module.exports = {
-  name: 'join',
-  description: 'Join courses',
-  usages: {
-    'join <course title/short title>': 'Join a *public* course.',
-    'join <course title/short title> <team name/number>':
-      "Join a course and team. If course is not public, you must've been added to it already.",
-  },
-  examples: [
-    'join Intro',
-    'join Intro 2',
-    'join intro "Team 3"',
-    'join Capstone',
-    'join MITR 7',
-  ],
-  async execute(message, member, args) {
-    if (args.length === 0) {
+  data: new SlashCommandBuilder()
+    .setName('join')
+    .setDescription('Join a course or a course team.')
+    .addSubcommand((sc) => sc.setName('course').setDescription('Join a course'))
+    .addSubcommand((sc) =>
+      sc.setName('team').setDescription('Join a course team')
+    ),
+  /**
+   * @param {CommandInteraction} interaction
+   */
+  async execute(interaction) {
+    const target = interaction.options.getSubcommand(); // "course" or "team"
+
+    const memberRoleIds = interaction.member.roles.cache.map((role) => role.id);
+
+    if (target === 'course') {
       const courses = await Course.findAll({
         where: {
-          isPublic: true,
-        },
-      });
-      const messageLines = [
-        '**Available Public Courses**',
-        ...courses.map((c) => `${c.title} \`(${c.shortTitle})\``),
-      ];
-      message.channel.send(messageLines.join('\n'), { split: true });
-      return;
-    }
-    const courseIdentifier = args[0];
-
-    const course = await findCourse(courseIdentifier);
-    if (!course) {
-      await message.reply('Course not found.');
-      return;
-    }
-
-    if (!course.isPublic) {
-      await message.reply(
-        'You can only be added to that course by the instructor.'
-      );
-      return;
-    }
-
-    try {
-      await message.member.roles.add(course.discordRoleId);
-      await message.reply('Added role!');
-    } catch (e) {
-      await message.reply('Failed to add role...');
-      return;
-    }
-
-    try {
-      const courseGeneralChannel = await findCourseGeneralChannel(
-        message.guild,
-        course
-      );
-      await courseGeneralChannel.send(`Welcome <@${message.author.id}>!`);
-    } catch (e) {
-      logger.error('Failed to send welcome message.');
-      logger.error(e);
-    }
-
-    if (args.length === 2) {
-      // Join team as well
-      // Find team
-      const teamIdentifier = args[1].toLowerCase().replace('team', '').trim();
-      const courseTeam = await CourseTeam.findOne({
-        where: {
-          CourseId: course.id,
-          title: {
-            [Op.iLike]: teamIdentifier,
+          discordRoleId: {
+            [Op.notIn]: memberRoleIds,
           },
         },
       });
+      const row = courseSelectorActionRowFactory('join', courses);
 
-      if (!courseTeam) {
-        await message.reply('No such team!');
+      // Discord gets mad if we send a select menu with no options so we check for that
+      if (courses.length === 0) {
+        await interaction.reply({
+          content: 'ℹ️ There are no other courses to join.',
+          ephemeral: true,
+        });
         return;
       }
 
-      try {
-        if (message.member.roles.cache.has(courseTeam.discordRoleId)) {
-          await message.reply("You're already in that team!");
-        } else {
-          await message.member.roles.add(courseTeam.discordRoleId);
-          // Send welcome message
-          const channel = message.guild.channels.cache.get(
-            courseTeam.discordTextChannelId
-          );
-          await channel.send(`Welcome <@${message.author.id}>!`);
-        }
-      } catch (error) {
-        await message.reply('Failed to add team role...');
-        logger.error(error);
+      // Send a message with a select menu of courses
+      // When selected, a new interaction will be fired with the custom ID specified
+      // Another event handler can pick this up and complete the joining or leaving of the course
+      await interaction.reply({
+        content: `❔ Choose a course to **join**.`,
+        components: [row],
+        ephemeral: true,
+      });
+    } else if (target === 'team') {
+      // Find the course teams that are for the courses the member is in and aren't currently in
+      const courseTeams = await CourseTeam.findAll({
+        where: {
+          '$Course.discordRoleId$': {
+            [Op.in]: memberRoleIds,
+          },
+          discordRoleId: {
+            [Op.notIn]: memberRoleIds,
+          },
+        },
+        include: [{ model: Course, as: 'Course' }],
+      });
+
+      // Generate select menu of these teams
+      const row = courseTeamSelectorActionRowFactory('join', courseTeams);
+
+      // Discord gets mad if we send a select menu with no options so we check for that
+      if (courseTeams.length === 0) {
+        const currentCourses = await Course.findAll({
+          where: {
+            discordRoleId: {
+              [Op.in]: memberRoleIds,
+            },
+          },
+        });
+        await interaction.reply({
+          content: `ℹ️ There are no teams in your courses **${currentCourses
+            .map((course) => course.title)
+            .join(', ')}** to join.`,
+          ephemeral: true,
+        });
+        return;
       }
+
+      // Send a message with a select menu of course teams
+      // When selected, a new interaction will be fired with the custom ID specified
+      // Another event handler can pick this up and complete the joining or leaving of the course team
+      await interaction.reply({
+        content: `❔ Choose a course team to **join**.`,
+        components: [row],
+        ephemeral: true,
+      });
     }
   },
 };
