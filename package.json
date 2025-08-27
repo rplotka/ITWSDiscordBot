@@ -37,6 +37,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.26.0",
     "nodemon": "^2.0.16",
+    "pino-pretty": "^13.1.1",
     "prettier": "^2.6.2"
   }
 }
