@@ -1,4 +1,4 @@
-const { ModalSubmitInteraction, Guild } = require('discord.js');
+const { ChannelType } = require('discord.js');
 const { coursePermissions, courseChannelTopics } = require('../core/constants');
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
@@ -7,8 +7,8 @@ const logger = require('../core/logging');
  * Attempts to create a new instructor Discord role named after the given course,
  * and then assigns the role's ID to the course object. (DOES NOT SAVE COURSE OBJECT)
  *
- * @param {Guild} guild
- * @param {Course} course
+ * @param {import('discord.js').Guild} guild
+ * @param {import('../core/db').Course} course
  */
 async function createCourseRoles(guild, course) {
   // Course role
@@ -18,6 +18,7 @@ async function createCourseRoles(guild, course) {
     hoist: true,
     reason: `Role for new course ${course.title}`,
   });
+  // eslint-disable-next-line no-param-reassign
   course.discordRoleId = courseRole.id;
 
   // Instructor role
@@ -26,6 +27,7 @@ async function createCourseRoles(guild, course) {
     mentionable: true,
     reason: `Instructor role for new course ${course.title}`,
   });
+  // eslint-disable-next-line no-param-reassign
   course.discordInstructorRoleId = courseInstructorRole.id;
 }
 
@@ -33,8 +35,8 @@ async function createCourseRoles(guild, course) {
  * Attempts to create a new Discord category named after the given course,
  * as well as an announcements channel and general channel. (DOES NOT SAVE COURSE OBJECT)
  *
- * @param {Guild} guild
- * @param {Course} course
+ * @param {import('discord.js').Guild} guild
+ * @param {import('../core/db').Course} course
  */
 async function createCourseChannels(guild, course) {
   const basePermissions = coursePermissions.base(
@@ -43,10 +45,12 @@ async function createCourseChannels(guild, course) {
   );
 
   // Create course category
-  const courseCategory = await guild.channels.create(course.title, {
-    type: 'GUILD_CATEGORY',
+  const courseCategory = await guild.channels.create({
+    name: course.title,
+    type: ChannelType.GuildCategory,
     permissionOverwrites: basePermissions,
   });
+  // eslint-disable-next-line no-param-reassign
   course.discordCategoryId = courseCategory.id;
 
   // Create announcement channel
@@ -55,16 +59,18 @@ async function createCourseChannels(guild, course) {
     course.discordRoleId
   );
 
-  await guild.channels.create(`${course.shortTitle}-announcements`, {
-    type: 'GUILD_TEXT',
+  await guild.channels.create({
+    name: `${course.shortTitle}-announcements`,
+    type: ChannelType.GuildText,
     topic: courseChannelTopics.announcements(course),
     parent: courseCategory.id,
     permissionOverwrites: announcementPermissions,
   });
 
   // General channel
-  await guild.channels.create('general', {
-    type: 'GUILD_TEXT',
+  await guild.channels.create({
+    name: 'general',
+    type: ChannelType.GuildText,
     topic: courseChannelTopics.general(course),
     parent: courseCategory.id,
   });
@@ -74,7 +80,7 @@ module.exports = {
   name: 'interactionCreate',
   once: false,
   /**
-   * @param {ModalSubmitInteraction} interaction
+   * @param {import('discord.js').ModalSubmitInteraction} interaction
    */
   async execute(interaction) {
     if (
@@ -83,7 +89,7 @@ module.exports = {
     )
       return;
 
-    interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
 
     logger.info(`${interaction.member} submited the new course modal`);
 
@@ -152,8 +158,7 @@ module.exports = {
       return;
     }
 
-    await interaction.reply({
-      ephemeral: true,
+    await interaction.editReply({
       content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
     });
   },

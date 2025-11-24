@@ -1,12 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const {
-  CommandInteraction,
-  MessageActionRow,
-  MessageSelectMenu,
-} = require('discord.js');
 const { Op } = require('sequelize');
 const { Course, CourseTeam } = require('../core/db');
-const logger = require('../core/logging');
 const {
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,

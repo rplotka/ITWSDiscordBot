@@ -1,4 +1,4 @@
-const { CommandInteraction } = require('discord.js');
+// JSDoc types: CommandInteraction
 const logger = require('../core/logging');
 const { isModeratorOrAbove } = require('../core/permissions');
 
@@ -10,7 +10,7 @@ module.exports = {
    * @param {CommandInteraction} interaction
    */
   async execute(interaction) {
-    if (!interaction.isCommand()) return;
+    if (!interaction.isChatInputCommand()) return;
 
     const command = interaction.client.commands.get(interaction.commandName);
 

@@ -1,26 +1,25 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const {
-  CommandInteraction,
-  MessageButton,
-  MessageActionRow,
+  ButtonBuilder,
+  ActionRowBuilder,
+  ButtonStyle,
 } = require('discord.js');
-const logger = require('../core/logging');
 const { userRoles } = require('../core/constants');
 
-const roleButtonsMessageActionRowFactory = (userRoles) =>
-  new MessageActionRow().addComponents(
-    userRoles.map((userRole) => {
+const roleButtonsMessageActionRowFactory = (roles) =>
+  new ActionRowBuilder().addComponents(
+    roles.map((userRole) => {
       if (userRole.customId) {
-        return new MessageButton()
+        return new ButtonBuilder()
           .setCustomId(`set-role-${userRole.customId}`)
           .setLabel(userRole.label)
-          .setStyle('PRIMARY');
+          .setStyle(ButtonStyle.Primary);
       }
 
-      return new MessageButton()
+      return new ButtonBuilder()
         .setURL(userRole.url)
         .setLabel(userRole.label)
-        .setStyle('LINK');
+        .setStyle(ButtonStyle.Link);
     })
   );
 

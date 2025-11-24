@@ -1,11 +1,17 @@
-// eslint-disable-next-line no-unused-vars
-const Discord = require('discord.js');
+const {
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ChannelType,
+} = require('discord.js');
 const { Op } = require('sequelize');
-const { Course, CourseTeam } = require('./db');
+const { CourseTeam } = require('./db');
 const logger = require('./logging');
 
 const addCourseModalFactory = () => {
-  const modal = new Discord.Modal()
+  const modal = new ModalBuilder()
     .setCustomId('add-course-modal')
     .setTitle('Add Course');
 
@@ -15,22 +21,22 @@ const addCourseModalFactory = () => {
   // - isPublic
   // - instructors
 
-  const titleInput = new Discord.TextInputComponent()
+  const titleInput = new TextInputBuilder()
     .setCustomId('add-course-modal-title')
     .setLabel("What's the FULL name of the course?")
     .setRequired(true)
-    .setStyle('SHORT');
+    .setStyle(TextInputStyle.Short);
 
-  const shortTitleInput = new Discord.TextInputComponent()
+  const shortTitleInput = new TextInputBuilder()
     .setCustomId('add-course-modal-short-title')
     .setLabel("What's the SHORT name of the course?")
     .setPlaceholder('e.g. intro, mitr, capstone')
     .setRequired(true)
-    .setStyle('SHORT');
+    .setStyle(TextInputStyle.Short);
 
   // Discord does not yet appear to support select menus in modals
 
-  // const isPublicInput = new Discord.MessageSelectMenu()
+  // const isPublicInput = new StringSelectMenuBuilder()
   //   .setCustomId('add-course-modal-is-public')
   //   .setPlaceholder('Can students freely join?')
   //   .setOptions([
@@ -48,17 +54,17 @@ const addCourseModalFactory = () => {
   //     },
   //   ]);
 
-  const instructorsInput = new Discord.TextInputComponent()
+  const instructorsInput = new TextInputBuilder()
     .setCustomId('add-course-modal-instructors')
     .setLabel('Who is instructing the course?')
     .setPlaceholder('Comma-separated list of instructor RCS IDs')
     .setRequired(true)
-    .setStyle('SHORT');
+    .setStyle(TextInputStyle.Short);
 
-  const row1 = new Discord.MessageActionRow().addComponents(titleInput);
-  const row2 = new Discord.MessageActionRow().addComponents(shortTitleInput);
-  const row3 = new Discord.MessageActionRow().addComponents(instructorsInput);
-  // const row4 = new Discord.MessageActionRow().addComponents(isPublicInput);
+  const row1 = new ActionRowBuilder().addComponents(titleInput);
+  const row2 = new ActionRowBuilder().addComponents(shortTitleInput);
+  const row3 = new ActionRowBuilder().addComponents(instructorsInput);
+  // const row4 = new ActionRowBuilder().addComponents(isPublicInput);
 
   modal.addComponents(row1, row2, row3);
 
@@ -70,8 +76,8 @@ const addCourseModalFactory = () => {
  * @param {Course[]} courses
  */
 const courseSelectorActionRowFactory = (courseAction, courses) =>
-  new Discord.MessageActionRow().addComponents(
-    new Discord.MessageSelectMenu()
+  new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
       .setCustomId(`course-${courseAction}`)
       .setPlaceholder('Select a course')
       .setOptions(
@@ -91,8 +97,8 @@ const courseTeamSelectorActionRowFactory = (
   courseTeamAction,
   courseTeamsWithCourse
 ) =>
-  new Discord.MessageActionRow().addComponents(
-    new Discord.MessageSelectMenu()
+  new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
       .setCustomId(`course-team-${courseTeamAction}`)
       .setPlaceholder(`Select a team to ${courseTeamAction}`)
       .setOptions(
@@ -113,7 +119,7 @@ const courseTeamSelectorActionRowFactory = (
 function findCourseGeneralChannel(guild, course) {
   const courseCategory = guild.channels.cache.get(course.discordCategoryId);
   return courseCategory.children.find(
-    (child) => child.type === 'GUILD_TEXT' && child.name === 'general'
+    (child) => child.type === ChannelType.GuildText && child.name === 'general'
   );
 }
 
