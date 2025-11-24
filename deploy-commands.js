@@ -1,7 +1,8 @@
 /* eslint-disable global-require */
 /* eslint-disable import/no-dynamic-require */
+// eslint-disable-next-line import/no-unresolved
 const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
+const { Routes } = require('discord-api-types/v10');
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -30,11 +31,17 @@ commandFiles.forEach((file) => {
   // );
 });
 
-const rest = new REST({ version: '9' }).setToken(DISCORD_BOT_TOKEN);
+const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN);
 
 rest
   .put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, DISCORD_SERVER_ID), {
     body: commands,
   })
-  .then(() => console.log('Successfully registered application commands.'))
-  .catch(console.error);
+  .then(() => {
+    // eslint-disable-next-line no-console
+    console.log('Successfully registered application commands.');
+  })
+  .catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error(error);
+  });

@@ -1,9 +1,8 @@
 const {
-  GuildMember,
-  MessageActionRow,
-  MessageSelectMenu,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ComponentType,
 } = require('discord.js');
-const logger = require('../core/logging');
 
 const roles = [
   {
@@ -43,8 +42,8 @@ module.exports = {
    * @param {GuildMember} member
    */
   async execute(member) {
-    const row = new MessageActionRow().addComponents(
-      new MessageSelectMenu()
+    const row = new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
         .setCustomId('role')
         .setPlaceholder('Select the role that best fits')
         .setOptions(roles)
@@ -60,7 +59,7 @@ module.exports = {
     let selectionInteraction;
     try {
       selectionInteraction = await message.awaitMessageComponent({
-        componentType: 'SELECT_MENU',
+        componentType: ComponentType.StringSelect,
         max: 1,
         time: 20000,
       });

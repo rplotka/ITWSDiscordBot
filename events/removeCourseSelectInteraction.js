@@ -1,4 +1,4 @@
-const { CommandInteraction } = require('discord.js');
+// JSDoc types: CommandInteraction
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
 const { removeCourse } = require('../core/utils');
@@ -12,7 +12,7 @@ module.exports = {
    */
   async execute(interaction) {
     if (
-      !interaction.isSelectMenu() ||
+      !interaction.isStringSelectMenu() ||
       interaction.customId !== 'course-remove' ||
       !interaction.values.length
     )

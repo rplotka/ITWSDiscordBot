@@ -1,12 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const {
-  CommandInteraction,
-  MessageButton,
-  MessageActionRow,
-} = require('discord.js');
-const logger = require('../core/logging');
-const { userRoles } = require('../core/constants');
-const {
   addCourseModalFactory,
   courseSelectorActionRowFactory,
 } = require('../core/utils');

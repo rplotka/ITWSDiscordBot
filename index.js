@@ -1,6 +1,6 @@
 /* eslint-disable global-require */
 /* eslint-disable import/no-dynamic-require */
-const { Client, Intents, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const dotenv = require('dotenv');
 const { readdirSync } = require('fs');
 const path = require('path');
@@ -11,7 +11,7 @@ const logger = require('./core/logging');
 dotenv.config();
 
 // Create a new client instance
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 // Find event listeners
 const eventsPath = path.join(__dirname, 'events');
