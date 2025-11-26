@@ -8,4 +8,10 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 12,
   },
+  ignorePatterns: [
+    'commands-old/**',
+    'test.js',
+    'node_modules/**',
+    'coverage/**',
+  ],
 };

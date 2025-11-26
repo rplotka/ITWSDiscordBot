@@ -1,4 +1,3 @@
-const { ButtonInteraction } = require('discord.js');
 const { userRoles } = require('../core/constants');
 const logger = require('../core/logging');
 
@@ -6,7 +5,7 @@ module.exports = {
   name: 'interactionCreate',
   once: false,
   /**
-   * @param {ButtonInteraction} interaction
+   * @param {import('discord.js').ButtonInteraction} interaction
    */
   async execute(interaction) {
     const userRole = userRoles.find(

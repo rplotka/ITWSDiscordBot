@@ -1,4 +1,3 @@
-const { Client } = require('discord.js');
 const logger = require('../core/logging');
 
 module.exports = {
@@ -6,7 +5,7 @@ module.exports = {
   once: true,
   /**
    *
-   * @param {Client} client
+   * @param {import('discord.js').Client} client
    */
   execute(client) {
     logger.info(
