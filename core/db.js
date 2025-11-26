@@ -1,19 +1,28 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const logger = require('./logging').child({ from: 'db' });
 
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  logging: false,
-  dialect: 'postgres',
-  protocol: 'postgres',
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false,
-    },
-  },
-});
+// Only initialize database if DATABASE_URL is provided and valid
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl || databaseUrl === 'postgresql://user:password@host:port/database') {
+  logger.warn('DATABASE_URL not set or using placeholder. Database features will be unavailable.');
+}
 
-const Course = sequelize.define('Course', {
+const sequelize = databaseUrl && databaseUrl !== 'postgresql://user:password@host:port/database'
+  ? new Sequelize(databaseUrl, {
+      logging: false,
+      dialect: 'postgres',
+      protocol: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      },
+    })
+  : null;
+
+// Only define models if sequelize is initialized
+const Course = sequelize ? sequelize.define('Course', {
   title: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -43,9 +52,9 @@ const Course = sequelize.define('Course', {
   discordInstructorRoleId: {
     type: DataTypes.STRING,
   },
-});
+}) : null;
 
-const CourseTeam = sequelize.define('CourseTeam', {
+const CourseTeam = sequelize ? sequelize.define('CourseTeam', {
   title: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -59,9 +68,9 @@ const CourseTeam = sequelize.define('CourseTeam', {
   discordRoleId: {
     type: DataTypes.STRING,
   },
-});
+}) : null;
 
-const Group = sequelize.define('Group', {
+const Group = sequelize ? sequelize.define('Group', {
   title: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -86,31 +95,41 @@ const Group = sequelize.define('Group', {
     allowNull: false,
     comment: 'ID of Discord role that this group owns and grants to members',
   },
-});
+}) : null;
 
 // Associations
 // https://sequelize.org/master/manual/assocs.html
-Course.hasMany(CourseTeam, {
-  foreignKey: {
-    allowNull: false,
-  },
-});
-CourseTeam.belongsTo(Course);
+if (Course && CourseTeam) {
+  Course.hasMany(CourseTeam, {
+    foreignKey: {
+      allowNull: false,
+    },
+  });
+  CourseTeam.belongsTo(Course);
+}
 
 // Check the database connection, and then ensure the database and tables exist
-sequelize
-  .authenticate()
-  .then(() => {
-    logger.info('Connected to Database.');
-    return sequelize.sync({ alter: true });
-  })
-  .then(() => {
-    logger.info('Synced Database.');
-  })
-  .catch((err) => {
-    logger.error(err);
-    process.exit(1);
-  });
+if (sequelize) {
+  sequelize
+    .authenticate()
+    .then(() => {
+      logger.info('Connected to Database.');
+      return sequelize.sync({ alter: true });
+    })
+    .then(() => {
+      logger.info('Synced Database.');
+    })
+    .catch((err) => {
+      logger.error('Database connection error:', err);
+      // Don't exit process - allow bot to run without database for command deployment
+      if (process.env.NODE_ENV === 'production') {
+        logger.error('Exiting due to database error in production');
+        process.exit(1);
+      }
+    });
+} else {
+  logger.warn('Database not initialized. Some features may be unavailable.');
+}
 
 module.exports = {
   Course,

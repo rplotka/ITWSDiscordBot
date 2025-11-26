@@ -4,7 +4,7 @@
   "description": "Discord bot that manages the RPI ITWS Discord server.",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "node index.js",
     "dev": "nodemon index.js | pino-pretty",
     "deploy-commands": "node deploy-commands.js",
     "test": "ava"

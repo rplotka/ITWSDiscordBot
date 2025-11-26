@@ -4,6 +4,7 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const dotenv = require('dotenv');
 const { readdirSync } = require('fs');
 const path = require('path');
+const http = require('http');
 const logger = require('./core/logging');
 
 // Load environment variables from .env file.
@@ -52,14 +53,43 @@ const commandFiles = readdirSync(commandsPath).filter((file) =>
   file.endsWith('.js')
 );
 
+logger.info(`Found ${commandFiles.length} command files: ${commandFiles.join(', ')}`);
+
 // Hook up command handlers
 commandFiles.forEach((file) => {
   const filePath = path.join(commandsPath, file);
-  const command = require(filePath);
-  client.commands.set(command.data.name, command);
-  logger.info(
-    `Set up handler for slash command '${command.data.name}' in file 'commands/${file}'`
-  );
+  try {
+    logger.info(`Attempting to load command from 'commands/${file}'`);
+    const command = require(filePath);
+    if (!command.data) {
+      logger.error(`Command from 'commands/${file}' has no data property`);
+      return;
+    }
+    client.commands.set(command.data.name, command);
+    logger.info(
+      `Set up handler for slash command '${command.data.name}' in file 'commands/${file}'`
+    );
+  } catch (error) {
+    logger.error(`Failed to load command from 'commands/${file}':`, error);
+    logger.error(`Error stack: ${error.stack}`);
+  }
+});
+
+// Start HTTP server for Cloud Run health checks
+const PORT = process.env.PORT || 8080;
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/health' || req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', bot: 'online' }));
+  } else {
+    res.writeHead(404);
+    res.end('Not Found');
+  }
+});
+
+server.listen(PORT, () => {
+  logger.info(`HTTP server listening on port ${PORT}`);
 });
 
 // Login to Discord with the bot token

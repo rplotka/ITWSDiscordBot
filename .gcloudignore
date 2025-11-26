@@ -1,0 +1,55 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore
+
+.gcloudignore
+.git
+.gitignore
+.gitattributes
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+/test.js
+/*.test.js
+*.spec.js
+
+# Documentation
+README.md
+BREAKING_CHANGES_REPORT.md
+*.md
+
+# Development files
+.prettierrc
+.prettier.config.js
+.eslintrc*
+prettier.config.js
+
+# Images
+images/
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# Old commands
+commands-old/
+

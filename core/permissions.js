@@ -1,5 +1,4 @@
-const SERVER_ID = process.env.DISCORD_SERVER_ID;
-const { Permissions, User } = require('discord.js');
+const { PermissionFlagsBits } = require('discord.js');
 
 /**
  * Error representing a failed attempt to do something
@@ -16,12 +15,23 @@ class NotAuthorized extends Error {
 
 /**
  * Throws a NotAuthorized error unless the author has the Moderator, Faculty, or Administrator role.
- * @param {User} author
+ * @param {GuildMember} member
  */
-module.exports.isModeratorOrAbove = async function isModeratorOrAbove(author) {
-  const server = author.client.guilds.cache.get(SERVER_ID);
-  const member = await server.members.fetch(author.id);
-  if (member.permissions.has(Permissions.FLAGS.MANAGE_GUILD)) return;
+module.exports.isModeratorOrAbove = async function isModeratorOrAbove(member) {
+  // Check if member exists and has permissions
+  if (!member) {
+    throw new NotAuthorized('Only Moderators and above can run that command.');
+  }
+  
+  // If member is a GuildMember with cached permissions, check directly
+  if (member.guild && member.permissions) {
+    if (member.permissions.has(PermissionFlagsBits.ManageGuild) || 
+        member.permissions.has(PermissionFlagsBits.Administrator)) return;
+    throw new NotAuthorized('Only Moderators and above can run that command.');
+  }
+  
+  // Fallback: member might not have permissions cached, but this is rare
+  // For command interactions, member should always have permissions
   throw new NotAuthorized('Only Moderators and above can run that command.');
 };
 
