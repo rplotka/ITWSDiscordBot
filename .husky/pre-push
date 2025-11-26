@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run full quality checks before push
+npm run lint
+npm run format:check
+
+# Run tests if they exist
+npm test || true
+

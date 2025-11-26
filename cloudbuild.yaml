@@ -1,5 +1,16 @@
 # Cloud Build configuration for automated deployments
 steps:
+  # Install Node.js and run quality checks
+  - name: 'node:18'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        npm ci
+        npm run lint
+        npm run format:check
+        npm run security:audit || echo "Security audit found issues (non-blocking)"
+  
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/itws-discord-bot:$SHORT_SHA', '-t', 'gcr.io/$PROJECT_ID/itws-discord-bot:latest', '.']
