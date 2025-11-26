@@ -22,14 +22,17 @@ module.exports.isModeratorOrAbove = async function isModeratorOrAbove(member) {
   if (!member) {
     throw new NotAuthorized('Only Moderators and above can run that command.');
   }
-  
+
   // If member is a GuildMember with cached permissions, check directly
   if (member.guild && member.permissions) {
-    if (member.permissions.has(PermissionFlagsBits.ManageGuild) || 
-        member.permissions.has(PermissionFlagsBits.Administrator)) return;
+    if (
+      member.permissions.has(PermissionFlagsBits.ManageGuild) ||
+      member.permissions.has(PermissionFlagsBits.Administrator)
+    )
+      return;
     throw new NotAuthorized('Only Moderators and above can run that command.');
   }
-  
+
   // Fallback: member might not have permissions cached, but this is rare
   // For command interactions, member should always have permissions
   throw new NotAuthorized('Only Moderators and above can run that command.');

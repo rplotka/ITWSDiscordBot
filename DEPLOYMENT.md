@@ -67,6 +67,7 @@ gcloud sql instances describe itws-discord-db --format="value(connectionName)"
 ```
 
 Your `DATABASE_URL` will be:
+
 ```
 postgresql://botuser:YOUR_SECURE_PASSWORD@/itws_bot?host=/cloudsql/PROJECT_ID:REGION:INSTANCE_NAME
 ```
@@ -74,6 +75,7 @@ postgresql://botuser:YOUR_SECURE_PASSWORD@/itws_bot?host=/cloudsql/PROJECT_ID:RE
 ### Option B: Use External Database
 
 If you have an existing PostgreSQL database, use its connection string:
+
 ```
 postgresql://user:password@host:port/database
 ```
@@ -176,11 +178,13 @@ npm run deploy-commands
 ## Step 8: Verify Deployment
 
 1. Check Cloud Run logs:
+
    ```bash
    gcloud run services logs read itws-discord-bot --region us-central1 --limit 50
    ```
 
 2. Check if bot is online in Discord:
+
    - The bot should appear in your server's member list
    - Status should show as "Online"
 
@@ -199,22 +203,22 @@ name: Deploy to Cloud Run
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - id: 'auth'
         uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
-      
+
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-      
+
       - name: 'Build and Deploy'
         run: |
           gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT }}/itws-discord-bot
@@ -287,4 +291,3 @@ gcloud run services describe itws-discord-bot --region us-central1
 # Delete service
 gcloud run services delete itws-discord-bot --region us-central1
 ```
-

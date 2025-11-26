@@ -30,7 +30,7 @@ Copy over `.env.example` to `.env` and populate all of the values. You'll probab
 
 **Hints:**
 
-- `DISCORD_BOT_TOKEN` the *secret* bot token found on the Discord developer page for the bot
+- `DISCORD_BOT_TOKEN` the _secret_ bot token found on the Discord developer page for the bot
 
 ### Running Locally
 

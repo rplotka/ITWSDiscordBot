@@ -1,9 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const {
-  ButtonBuilder,
-  ActionRowBuilder,
-  ButtonStyle,
-} = require('discord.js');
+const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const { userRoles } = require('../core/constants');
 const logger = require('../core/logging');
 
@@ -41,23 +37,25 @@ module.exports = {
    */
   async execute(interaction) {
     logger.info(`Test command executed by ${interaction.user.tag}`);
-    
+
     try {
       // Defer reply immediately to avoid timeout
       await interaction.deferReply({ ephemeral: true });
-      
-      logger.info(`Attempting to create role buttons for channel ${interaction.channel.id}`);
+
+      logger.info(
+        `Attempting to create role buttons for channel ${interaction.channel.id}`
+      );
       const row = roleButtonsMessageActionRowFactory(userRoles);
-      
+
       logger.info(`Sending message to channel ${interaction.channel.id}`);
       await interaction.channel.send({
         content:
           '**Please select a role below in order to gain access to the server.**',
         components: [row],
       });
-      
+
       logger.info('Successfully sent role buttons message');
-      
+
       await interaction.editReply({
         content: '✅ Message sent successfully!',
       });
@@ -65,7 +63,7 @@ module.exports = {
       logger.error('Error in test command:', error);
       logger.error('Error message:', error.message);
       logger.error('Error stack:', error.stack);
-      
+
       // Try to send error message
       try {
         if (interaction.deferred || interaction.replied) {

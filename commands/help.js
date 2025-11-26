@@ -26,7 +26,7 @@ module.exports = {
           logger.error('Error processing command in help:', err);
         }
       });
-      
+
       if (commandList.length === 0) {
         commandList.push('No commands available');
       }
@@ -35,12 +35,18 @@ module.exports = {
       const description = commandList.join('\n');
       const embed = new EmbedBuilder()
         .setTitle('🤖 Available Commands')
-        .setDescription(description.length > 4096 ? `${description.substring(0, 4093)}...` : description)
+        .setDescription(
+          description.length > 4096
+            ? `${description.substring(0, 4093)}...`
+            : description
+        )
         .setColor(0x5865f2) // Discord blurple color
         .setTimestamp()
         .setFooter({ text: 'ITWS Discord Bot' });
 
-      logger.info(`Help command: Sending embed with ${commandList.length} commands`);
+      logger.info(
+        `Help command: Sending embed with ${commandList.length} commands`
+      );
       await interaction.editReply({ embeds: [embed] });
       logger.info(`${interaction.user.tag} used /help command`);
     } catch (error) {
@@ -62,4 +68,3 @@ module.exports = {
     }
   },
 };
-

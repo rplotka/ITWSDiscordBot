@@ -28,10 +28,12 @@ DATABASE_URL=postgresql://user:password@host:port/database
 ```
 
 **To get your Server ID:**
+
 1. Enable Developer Mode in Discord (Settings → Advanced → Developer Mode)
 2. Right-click your Discord server → Copy Server ID
 
 **To get Role IDs:**
+
 1. With Developer Mode enabled, right-click the role → Copy ID
 
 ### 2. Test Locally
@@ -61,11 +63,13 @@ You should see: `Successfully registered application commands.`
 Use this URL to invite the bot with proper permissions:
 
 **Full Permissions (Administrator):**
+
 ```
 https://discord.com/oauth2/authorize?client_id=1442370940058079232&scope=bot%20applications.commands&permissions=8
 ```
 
 **Or customize permissions:**
+
 - Go to https://discord.com/developers/applications/1442370940058079232/oauth2/url-generator
 - Select scopes: `bot`, `applications.commands`
 - Select permissions you need (or `Administrator` for full access)
@@ -116,6 +120,7 @@ gcloud run services update itws-discord-bot \
 ## Security Notes
 
 ⚠️ **IMPORTANT:**
+
 - Never commit your `.env` file to git (it's already in `.gitignore`)
 - Never share your bot token publicly
 - If your token is compromised, regenerate it in Discord Developer Portal
@@ -124,18 +129,20 @@ gcloud run services update itws-discord-bot \
 ## Troubleshooting
 
 **Bot not responding?**
+
 - Check if bot is online in Discord
 - Verify environment variables are set correctly
 - Check Cloud Run logs: `gcloud run services logs read itws-discord-bot --region us-central1`
 - Re-run `npm run deploy-commands`
 
 **Commands not showing?**
+
 - Run `npm run deploy-commands` again
 - Wait a few minutes for Discord to update
 - Check bot has `applications.commands` scope
 
 **Database connection issues?**
+
 - Verify `DATABASE_URL` is correct
 - Check database is accessible from Cloud Run
 - If using Cloud SQL, ensure Cloud Run has access
-

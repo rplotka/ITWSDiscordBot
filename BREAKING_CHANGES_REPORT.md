@@ -1,14 +1,17 @@
 # Discord Bot Breaking Changes Report
 
 ## Summary
+
 Your bot is using **Discord.js v13.7.0**, but the current stable version is **v14.25.1**. Discord.js v14 introduced major breaking changes that prevent your bot from working with the current Discord API.
 
 ## Major Breaking Changes
 
 ### 1. **Intents API Changed** ❌
+
 **Location:** `index.js:14`
 
 **Current Code:**
+
 ```javascript
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 ```
@@ -16,6 +19,7 @@ const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 **Issue:** `Intents.FLAGS` no longer exists in v14. It's been replaced with `GatewayIntentBits`.
 
 **Fix Required:**
+
 ```javascript
 const { Client, GatewayIntentBits } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -24,7 +28,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 ---
 
 ### 2. **MessageButton and MessageActionRow Deprecated** ❌
+
 **Locations:**
+
 - `commands/test.js:4-5`
 - `commands/admin.js:4-5`
 - `events/guildMemberAdd.js:3`
@@ -37,6 +43,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 **Issue:** `MessageButton` and `MessageActionRow` were removed. They're now `ButtonBuilder` and `ActionRowBuilder` from `@discordjs/builders`.
 
 **Fix Required:**
+
 ```javascript
 // OLD (v13)
 const { MessageButton, MessageActionRow } = require('discord.js');
@@ -50,13 +57,16 @@ const row = new ActionRowBuilder()...
 ```
 
 **Additional Changes:**
+
 - Button styles changed from strings (`'PRIMARY'`) to enum (`ButtonStyle.Primary`)
 - URL buttons use `ButtonBuilder.setURL()` instead of `setStyle('LINK')`
 
 ---
 
 ### 3. **MessageSelectMenu Deprecated** ❌
+
 **Locations:**
+
 - `events/guildMemberAdd.js:4, 47`
 - `events/joinCourseSelectInteraction.js:5`
 - `events/joinCourseTeamSelectInteraction.js:4`
@@ -69,6 +79,7 @@ const row = new ActionRowBuilder()...
 **Issue:** `MessageSelectMenu` was replaced with `StringSelectMenuBuilder` (or `SelectMenuBuilder`).
 
 **Fix Required:**
+
 ```javascript
 // OLD (v13)
 const { MessageSelectMenu } = require('discord.js');
@@ -82,11 +93,13 @@ const menu = new StringSelectMenuBuilder()...
 ---
 
 ### 4. **Modal and TextInputComponent Deprecated** ❌
+
 **Location:** `core/utils.js:8, 18, 24, 51`
 
 **Issue:** `Modal` and `TextInputComponent` were replaced with builders.
 
 **Fix Required:**
+
 ```javascript
 // OLD (v13)
 const modal = new Discord.Modal()...
@@ -99,16 +112,20 @@ const input = new TextInputBuilder()...
 ```
 
 **Additional Changes:**
+
 - Text input styles changed from strings (`'SHORT'`) to enum (`TextInputStyle.Short`)
 
 ---
 
 ### 5. **Channel Type Constants Changed** ❌
+
 **Locations:**
+
 - `core/utils.js:116`
 - `events/addCourseModalInteraction.js:59, 67`
 
 **Current Code:**
+
 ```javascript
 child.type === 'GUILD_TEXT'
 type: 'GUILD_TEXT',
@@ -117,6 +134,7 @@ type: 'GUILD_TEXT',
 **Issue:** Channel type strings were replaced with `ChannelType` enum.
 
 **Fix Required:**
+
 ```javascript
 // OLD (v13)
 channel.type === 'GUILD_TEXT'
@@ -131,9 +149,11 @@ type: ChannelType.GuildText,
 ---
 
 ### 6. **Interaction Methods Changed** ⚠️
+
 **Location:** `events/commandInteraction.js:13`
 
 **Current Code:**
+
 ```javascript
 if (!interaction.isCommand()) return;
 ```
@@ -141,6 +161,7 @@ if (!interaction.isCommand()) return;
 **Issue:** In v14, this should be `isChatInputCommand()` for slash commands.
 
 **Fix Required:**
+
 ```javascript
 // OLD (v13)
 if (!interaction.isCommand()) return;
@@ -152,9 +173,11 @@ if (!interaction.isChatInputCommand()) return;
 ---
 
 ### 7. **Component Type Constants Changed** ⚠️
+
 **Location:** `events/guildMemberAdd.js:63`
 
 **Current Code:**
+
 ```javascript
 componentType: 'SELECT_MENU',
 ```
@@ -162,6 +185,7 @@ componentType: 'SELECT_MENU',
 **Issue:** Component types changed to enum values.
 
 **Fix Required:**
+
 ```javascript
 // OLD (v13)
 componentType: 'SELECT_MENU',
@@ -174,9 +198,11 @@ componentType: ComponentType.StringSelect,
 ---
 
 ### 8. **API Route Version** ⚠️
+
 **Location:** `deploy-commands.js:4, 33`
 
 **Current Code:**
+
 ```javascript
 const { Routes } = require('discord-api-types/v9');
 const rest = new REST({ version: '9' })...
@@ -185,6 +211,7 @@ const rest = new REST({ version: '9' })...
 **Issue:** Discord API v9 is outdated. Should use v10.
 
 **Fix Required:**
+
 ```javascript
 const { Routes } = require('discord-api-types/v10');
 const rest = new REST({ version: '10' })...
@@ -195,6 +222,7 @@ const rest = new REST({ version: '10' })...
 ## Files That Need Updates
 
 ### High Priority (Core Functionality)
+
 1. ✅ `index.js` - Intents
 2. ✅ `commands/test.js` - Buttons
 3. ✅ `commands/admin.js` - Buttons
@@ -203,6 +231,7 @@ const rest = new REST({ version: '10' })...
 6. ✅ `deploy-commands.js` - API version
 
 ### Medium Priority (Event Handlers)
+
 7. ✅ `events/guildMemberAdd.js` - SelectMenus, ActionRows, ComponentType
 8. ✅ `events/joinCourseSelectInteraction.js` - SelectMenus
 9. ✅ `events/joinCourseTeamSelectInteraction.js` - SelectMenus
@@ -217,6 +246,7 @@ const rest = new REST({ version: '10' })...
 ## Recommended Migration Steps
 
 1. **Update package.json dependencies:**
+
    ```json
    "discord.js": "^14.25.1",
    "@discordjs/builders": "^1.7.0",
@@ -248,6 +278,7 @@ const rest = new REST({ version: '10' })...
 ## Quick Fix Summary
 
 The bot fails because:
+
 1. **Intents.FLAGS** doesn't exist → Use **GatewayIntentBits**
 2. **MessageButton/MessageActionRow** don't exist → Use **ButtonBuilder/ActionRowBuilder**
 3. **MessageSelectMenu** doesn't exist → Use **StringSelectMenuBuilder**
@@ -256,4 +287,3 @@ The bot fails because:
 6. **isCommand()** changed → Use **isChatInputCommand()**
 
 All of these will cause runtime errors when the bot tries to start or handle interactions.
-

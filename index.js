@@ -53,7 +53,9 @@ const commandFiles = readdirSync(commandsPath).filter((file) =>
   file.endsWith('.js')
 );
 
-logger.info(`Found ${commandFiles.length} command files: ${commandFiles.join(', ')}`);
+logger.info(
+  `Found ${commandFiles.length} command files: ${commandFiles.join(', ')}`
+);
 
 // Hook up command handlers
 commandFiles.forEach((file) => {

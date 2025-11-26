@@ -34,6 +34,7 @@ From Discord Developer Portal (https://discord.com/developers/applications):
 ### 3. Set Up Database
 
 **Option A: Cloud SQL (Recommended)**
+
 ```bash
 gcloud sql instances create itws-discord-db \
   --database-version=POSTGRES_14 \
@@ -45,16 +46,19 @@ gcloud sql users create botuser --instance=itws-discord-db --password=YOUR_PASSW
 ```
 
 **Option B: Use existing database**
+
 - Use your existing PostgreSQL connection string
 
 ### 4. Deploy to Cloud Run
 
 **Quick method (using script):**
+
 ```bash
 ./deploy.sh YOUR_PROJECT_ID us-central1
 ```
 
 **Manual method:**
+
 ```bash
 # Build
 gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/itws-discord-bot
@@ -76,6 +80,7 @@ gcloud run deploy itws-discord-bot \
 ### 5. Connect Discord
 
 **A. Deploy Slash Commands:**
+
 ```bash
 export DISCORD_BOT_TOKEN="YOUR_TOKEN"
 export DISCORD_CLIENT_ID="YOUR_CLIENT_ID"
@@ -84,6 +89,7 @@ npm run deploy-commands
 ```
 
 **B. Invite Bot to Server:**
+
 1. Go to Discord Developer Portal → OAuth2 → URL Generator
 2. Select scopes: `bot`, `applications.commands`
 3. Select permissions: `Administrator` (or specific permissions)
@@ -93,6 +99,7 @@ npm run deploy-commands
 ## Verify It Works
 
 1. **Check logs:**
+
    ```bash
    gcloud run services logs read itws-discord-bot --region us-central1 --limit 20
    ```
@@ -103,24 +110,26 @@ npm run deploy-commands
 
 ## Environment Variables Needed
 
-| Variable | Description | Where to Find |
-|----------|-------------|---------------|
-| `DISCORD_BOT_TOKEN` | Bot authentication token | Discord Dev Portal → Bot → Token |
-| `DISCORD_CLIENT_ID` | Application ID | Discord Dev Portal → General → Application ID |
-| `DISCORD_SERVER_ID` | Your Discord server ID | Right-click server → Copy ID |
-| `DATABASE_URL` | PostgreSQL connection string | Your database provider |
-| `DISCORD_PROSPECTIVE_STUDENTS_ROLE_ID` | Role ID for prospective students | Right-click role → Copy ID |
-| `DISCORD_ACCEPTED_STUDENTS_ROLE_ID` | Role ID for accepted students | Right-click role → Copy ID |
+| Variable                               | Description                      | Where to Find                                 |
+| -------------------------------------- | -------------------------------- | --------------------------------------------- |
+| `DISCORD_BOT_TOKEN`                    | Bot authentication token         | Discord Dev Portal → Bot → Token              |
+| `DISCORD_CLIENT_ID`                    | Application ID                   | Discord Dev Portal → General → Application ID |
+| `DISCORD_SERVER_ID`                    | Your Discord server ID           | Right-click server → Copy ID                  |
+| `DATABASE_URL`                         | PostgreSQL connection string     | Your database provider                        |
+| `DISCORD_PROSPECTIVE_STUDENTS_ROLE_ID` | Role ID for prospective students | Right-click role → Copy ID                    |
+| `DISCORD_ACCEPTED_STUDENTS_ROLE_ID`    | Role ID for accepted students    | Right-click role → Copy ID                    |
 
 ## Troubleshooting
 
 **Bot not responding?**
+
 - Check Cloud Run logs for errors
 - Verify environment variables are set
 - Ensure bot is invited with correct permissions
 - Run `npm run deploy-commands` again
 
 **Can't connect to database?**
+
 - Verify `DATABASE_URL` is correct
 - If using Cloud SQL, ensure Cloud Run has access:
   ```bash
@@ -147,4 +156,3 @@ gcloud run deploy itws-discord-bot \
 ## Full Documentation
 
 See `DEPLOYMENT.md` for detailed instructions and advanced configuration.
-
