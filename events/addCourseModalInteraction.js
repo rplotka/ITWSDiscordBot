@@ -214,9 +214,16 @@ module.exports = {
         return;
       }
 
+      // Send success message - use simpler format to avoid any formatting issues
       try {
+        const successMessage =
+          `🎉 **Created course, roles, and channels!**\n\n` +
+          `Course: **${newCourse.title}**\n` +
+          `Role ID: \`${newCourse.discordInstructorRoleId}\`\n\n` +
+          `Now assign the instructor role to all instructors. You will see the course category and channels in the sidebar.`;
+
         await interaction.editReply({
-          content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
+          content: successMessage,
         });
         logger.info(
           `Successfully sent completion message for course '${newCourse.title}'`
@@ -226,15 +233,17 @@ module.exports = {
           `Failed to send success message for course '${newCourse.title}'`
         );
         logger.error(`Error message: ${error.message}`);
+        logger.error(`Error name: ${error.name}`);
         logger.error(`Error stack: ${error.stack}`);
         // Try to send a simpler message
         try {
           await interaction.followUp({
-            content: `✅ Course '${newCourse.title}' created successfully!`,
+            content: `✅ Course '${newCourse.title}' created successfully! Role ID: ${newCourse.discordInstructorRoleId}`,
             ephemeral: true,
           });
         } catch (followUpError) {
           logger.error('Failed to send follow-up message:', followUpError);
+          logger.error(`Follow-up error: ${followUpError.message}`);
         }
       }
     } catch (error) {
