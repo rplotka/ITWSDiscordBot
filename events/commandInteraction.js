@@ -12,6 +12,33 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
+    // For commands that need database access, defer IMMEDIATELY to prevent timeout
+    // This must happen before ANY other processing, even logging
+    const needsDatabase = ['join', 'leave', 'admin'].includes(
+      interaction.commandName
+    );
+    if (needsDatabase && !interaction.replied && !interaction.deferred) {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+        logger.info(
+          `Deferred reply for ${interaction.commandName} from ${interaction.user.tag}`
+        );
+      } catch (deferError) {
+        logger.error(`Failed to defer reply: ${deferError.message}`);
+        logger.error(`Defer error stack: ${deferError.stack}`);
+        // Try to reply normally as fallback
+        try {
+          await interaction.reply({
+            content: '⏳ Processing...',
+            ephemeral: true,
+          });
+        } catch (replyError) {
+          logger.error(`Failed to reply as fallback: ${replyError.message}`);
+          return; // Can't communicate with Discord
+        }
+      }
+    }
+
     logger.info(
       `Received interaction: ${interaction.commandName} from ${interaction.user.tag}`
     );
@@ -19,6 +46,16 @@ module.exports = {
 
     if (!command) {
       logger.warn(`Command not found: ${interaction.commandName}`);
+      if (!interaction.replied && !interaction.deferred) {
+        try {
+          await interaction.reply({
+            content: '❌ Command not found!',
+            ephemeral: true,
+          });
+        } catch (error) {
+          logger.error(`Failed to reply for missing command: ${error.message}`);
+        }
+      }
       return;
     }
 
@@ -27,21 +64,6 @@ module.exports = {
         command.isModeratorOnly || false
       }`
     );
-
-    // For commands that need database access, defer IMMEDIATELY to prevent timeout
-    // This must happen before any other processing
-    const needsDatabase = ['join', 'leave', 'admin'].includes(
-      interaction.commandName
-    );
-    if (needsDatabase && !interaction.replied && !interaction.deferred) {
-      try {
-        await interaction.deferReply({ ephemeral: true });
-        logger.info(`Deferred reply for ${interaction.commandName}`);
-      } catch (deferError) {
-        logger.error(`Failed to defer reply: ${deferError.message}`);
-        // Continue anyway - command might handle its own reply
-      }
-    }
 
     // Check permissions - do this quickly to avoid interaction timeout
     if (command.isModeratorOnly) {
