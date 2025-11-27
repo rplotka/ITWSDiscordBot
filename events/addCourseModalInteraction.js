@@ -90,144 +90,174 @@ module.exports = {
     )
       return;
 
-    // Check permissions here since we skipped it in command handler
-    if (interaction.member?.permissions) {
-      const hasAdmin = interaction.member.permissions.has(
-        PermissionFlagsBits.Administrator
-      );
-      const hasManageGuild = interaction.member.permissions.has(
-        PermissionFlagsBits.ManageGuild
-      );
-      if (!hasAdmin && !hasManageGuild) {
-        await interaction.reply({
-          content: '❌ Only moderators can create courses!',
+    // Wrap everything in try-catch to catch any unhandled errors
+    try {
+      // Check permissions here since we skipped it in command handler
+      if (interaction.member?.permissions) {
+        const hasAdmin = interaction.member.permissions.has(
+          PermissionFlagsBits.Administrator
+        );
+        const hasManageGuild = interaction.member.permissions.has(
+          PermissionFlagsBits.ManageGuild
+        );
+        if (!hasAdmin && !hasManageGuild) {
+          await interaction.reply({
+            content: '❌ Only moderators can create courses!',
+            ephemeral: true,
+          });
+          return;
+        }
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      logger.info(`${interaction.member} submitted the new course modal`);
+
+      // Check if database is available
+      if (!Course) {
+        logger.error('Course model not available - database not connected');
+        await interaction.editReply({
           ephemeral: true,
+          content:
+            '❌ Database is not available. Channels were created but course was not saved. Please contact a Moderator!',
         });
         return;
       }
-    }
 
-    await interaction.deferReply({ ephemeral: true });
+      const val = (fieldName) =>
+        interaction.fields.getTextInputValue(fieldName);
 
-    logger.info(`${interaction.member} submitted the new course modal`);
+      const title = val('add-course-modal-title');
+      const shortTitle = val('add-course-modal-short-title');
+      const instructors = val('add-course-modal-instructors')
+        .split(',')
+        .map((value) => value.trim())
+        .filter((value) => value);
 
-    // Check if database is available
-    if (!Course) {
-      logger.error('Course model not available - database not connected');
-      await interaction.editReply({
-        ephemeral: true,
-        content:
-          '❌ Database is not available. Channels were created but course was not saved. Please contact a Moderator!',
+      // const courseIsPublicField = interaction.fields.getField(
+      //   'add-course-modal-is-public'
+      // );
+      const isPublic = true; // = courseIsPublicField.value === 'yes';
+
+      const newCourse = Course.build({
+        title,
+        shortTitle,
+        isPublic,
+        instructors,
       });
-      return;
-    }
 
-    const val = (fieldName) => interaction.fields.getTextInputValue(fieldName);
+      // Attempt to create course, role, and channels
 
-    const title = val('add-course-modal-title');
-    const shortTitle = val('add-course-modal-short-title');
-    const instructors = val('add-course-modal-instructors')
-      .split(',')
-      .map((value) => value.trim())
-      .filter((value) => value);
-
-    // const courseIsPublicField = interaction.fields.getField(
-    //   'add-course-modal-is-public'
-    // );
-    const isPublic = true; // = courseIsPublicField.value === 'yes';
-
-    const newCourse = Course.build({
-      title,
-      shortTitle,
-      isPublic,
-      instructors,
-    });
-
-    // Attempt to create course, role, and channels
-
-    try {
-      await createCourseRoles(interaction.guild, newCourse);
-      logger.info(`Successfully created roles for course '${newCourse.title}'`);
-    } catch (error) {
-      logger.error(
-        `Failed to create course roles for new course '${newCourse.title}'`
-      );
-      logger.error(`Error message: ${error.message}`);
-      logger.error(`Error stack: ${error.stack}`);
-      await interaction.editReply({
-        ephemeral: true,
-        content: `❌ Failed to create roles: ${error.message}. Please contact a Moderator!`,
-      });
-      return;
-    }
-
-    try {
-      await createCourseChannels(interaction.guild, newCourse);
-      logger.info(
-        `Successfully created channels for course '${newCourse.title}'`
-      );
-    } catch (error) {
-      logger.error(
-        `Failed to create course channels for new course '${newCourse.title}'`
-      );
-      logger.error(`Error message: ${error.message}`);
-      logger.error(`Error stack: ${error.stack}`);
-      await interaction.editReply({
-        ephemeral: true,
-        content: `❌ Failed to create channels: ${error.message}. Please contact a Moderator!`,
-      });
-      return;
-    }
-
-    try {
-      await newCourse.save();
-      logger.info(`Successfully saved course '${newCourse.title}' to database`);
-    } catch (error) {
-      logger.error(
-        'Created course Discord roles and channels but failed to save Course in DB...'
-      );
-      logger.error(`Error message: ${error.message}`);
-      logger.error(`Error name: ${error.name}`);
-      logger.error(`Error stack: ${error.stack}`);
-
-      // Try to provide more helpful error message
-      let errorMsg = error.message;
-      if (error.name === 'SequelizeValidationError') {
-        errorMsg = `Validation error: ${
-          error.errors?.map((e) => e.message).join(', ') || error.message
-        }`;
-      } else if (error.name === 'SequelizeDatabaseError') {
-        errorMsg = `Database error: ${error.message}`;
+      try {
+        await createCourseRoles(interaction.guild, newCourse);
+        logger.info(
+          `Successfully created roles for course '${newCourse.title}'`
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to create course roles for new course '${newCourse.title}'`
+        );
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error stack: ${error.stack}`);
+        await interaction.editReply({
+          ephemeral: true,
+          content: `❌ Failed to create roles: ${error.message}. Please contact a Moderator!`,
+        });
+        return;
       }
 
-      await interaction.editReply({
-        ephemeral: true,
-        content: `❌ Created roles and channels but failed to save to database: ${errorMsg}. Please contact a Moderator!`,
-      });
-      return;
-    }
+      try {
+        await createCourseChannels(interaction.guild, newCourse);
+        logger.info(
+          `Successfully created channels for course '${newCourse.title}'`
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to create course channels for new course '${newCourse.title}'`
+        );
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error stack: ${error.stack}`);
+        await interaction.editReply({
+          ephemeral: true,
+          content: `❌ Failed to create channels: ${error.message}. Please contact a Moderator!`,
+        });
+        return;
+      }
 
-    try {
-      await interaction.editReply({
-        content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
-      });
-      logger.info(
-        `Successfully sent completion message for course '${newCourse.title}'`
-      );
+      try {
+        await newCourse.save();
+        logger.info(
+          `Successfully saved course '${newCourse.title}' to database`
+        );
+      } catch (error) {
+        logger.error(
+          'Created course Discord roles and channels but failed to save Course in DB...'
+        );
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error name: ${error.name}`);
+        logger.error(`Error stack: ${error.stack}`);
+
+        // Try to provide more helpful error message
+        let errorMsg = error.message;
+        if (error.name === 'SequelizeValidationError') {
+          errorMsg = `Validation error: ${
+            error.errors?.map((e) => e.message).join(', ') || error.message
+          }`;
+        } else if (error.name === 'SequelizeDatabaseError') {
+          errorMsg = `Database error: ${error.message}`;
+        }
+
+        await interaction.editReply({
+          ephemeral: true,
+          content: `❌ Created roles and channels but failed to save to database: ${errorMsg}. Please contact a Moderator!`,
+        });
+        return;
+      }
+
+      try {
+        await interaction.editReply({
+          content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
+        });
+        logger.info(
+          `Successfully sent completion message for course '${newCourse.title}'`
+        );
+      } catch (error) {
+        logger.error(
+          `Failed to send success message for course '${newCourse.title}'`
+        );
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error stack: ${error.stack}`);
+        // Try to send a simpler message
+        try {
+          await interaction.followUp({
+            content: `✅ Course '${newCourse.title}' created successfully!`,
+            ephemeral: true,
+          });
+        } catch (followUpError) {
+          logger.error('Failed to send follow-up message:', followUpError);
+        }
+      }
     } catch (error) {
-      logger.error(
-        `Failed to send success message for course '${newCourse.title}'`
-      );
+      // Catch any unhandled errors in the entire function
+      logger.error('Unhandled error in addCourseModalInteraction:', error);
       logger.error(`Error message: ${error.message}`);
       logger.error(`Error stack: ${error.stack}`);
-      // Try to send a simpler message
+
+      // Try to send error message if interaction is still valid
       try {
-        await interaction.followUp({
-          content: `✅ Course '${newCourse.title}' created successfully!`,
-          ephemeral: true,
-        });
-      } catch (followUpError) {
-        logger.error('Failed to send follow-up message:', followUpError);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: `❌ An unexpected error occurred: ${error.message}. Please contact a Moderator!`,
+            ephemeral: true,
+          });
+        } else {
+          await interaction.reply({
+            content: `❌ An unexpected error occurred: ${error.message}. Please contact a Moderator!`,
+            ephemeral: true,
+          });
+        }
+      } catch (replyError) {
+        logger.error('Failed to send error message:', replyError);
       }
     }
   },
