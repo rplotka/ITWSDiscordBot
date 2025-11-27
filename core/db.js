@@ -12,18 +12,25 @@ if (
   );
 }
 
+// Determine if this is a Cloud SQL Unix socket connection
+// Unix socket connections (via /cloudsql/) don't need SSL
+const isUnixSocket = databaseUrl && databaseUrl.includes('host=/cloudsql/');
+const needsSSL = !isUnixSocket; // Only use SSL for TCP connections
+
 const sequelize =
   databaseUrl && databaseUrl !== 'postgresql://user:password@host:port/database'
     ? new Sequelize(databaseUrl, {
         logging: false,
         dialect: 'postgres',
         protocol: 'postgres',
-        dialectOptions: {
-          ssl: {
-            require: true,
-            rejectUnauthorized: false,
-          },
-        },
+        dialectOptions: needsSSL
+          ? {
+              ssl: {
+                require: true,
+                rejectUnauthorized: false,
+              },
+            }
+          : {}, // No SSL for Unix socket connections
         pool: {
           max: 5,
           min: 0,
