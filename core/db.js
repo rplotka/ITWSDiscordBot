@@ -157,4 +157,5 @@ module.exports = {
   Course,
   CourseTeam,
   Group,
+  sequelize,
 };

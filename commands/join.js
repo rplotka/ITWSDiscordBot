@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { Op } = require('sequelize');
-const { Course, CourseTeam } = require('../core/db');
+const { Course, CourseTeam, sequelize } = require('../core/db');
 const {
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,
@@ -34,8 +34,10 @@ module.exports = {
    * @param {CommandInteraction} interaction
    */
   async execute(interaction) {
-    // Defer reply to prevent timeout during database queries
-    await interaction.deferReply({ ephemeral: true });
+    // Defer reply if not already deferred (should be deferred by command handler)
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true });
+    }
 
     // Check if database is available
     if (!Course || !CourseTeam) {
@@ -44,6 +46,24 @@ module.exports = {
         content: '❌ Database is not available. Please contact a Moderator!',
       });
       return;
+    }
+
+    // Check if database connection is actually established (quick check)
+    if (sequelize) {
+      try {
+        // Quick connection check with timeout
+        const authPromise = sequelize.authenticate();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Connection check timeout')), 2000);
+        });
+        await Promise.race([authPromise, timeoutPromise]);
+      } catch (authError) {
+        logger.error('Database authentication failed:', authError);
+        await interaction.editReply({
+          content: '❌ Database connection failed. Please contact a Moderator!',
+        });
+        return;
+      }
     }
 
     const target = interaction.options.getSubcommand(); // "course" or "team"

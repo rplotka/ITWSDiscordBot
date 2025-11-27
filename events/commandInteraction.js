@@ -96,6 +96,16 @@ module.exports = {
       logger.info(
         `${interaction.user} issued command '${interaction.commandName}'`
       );
+
+      // For commands that need database access, defer immediately to prevent timeout
+      // This is especially important for /join, /leave, and /admin commands
+      const needsDatabase = ['join', 'leave', 'admin'].includes(
+        interaction.commandName
+      );
+      if (needsDatabase && !interaction.replied && !interaction.deferred) {
+        await interaction.deferReply({ ephemeral: true });
+      }
+
       await command.execute(interaction);
     } catch (error) {
       logger.error('Error executing command:', error);
