@@ -13,31 +13,35 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
+    // CRITICAL: For /admin courses add, show modal IMMEDIATELY - FIRST THING
+    // Check this BEFORE any other processing to save precious milliseconds
+    // This must happen within 3 seconds or Discord times out
+    if (interaction.commandName === 'admin') {
+      try {
+        const subcommandGroup = interaction.options.getSubcommandGroup();
+        const subcommand = interaction.options.getSubcommand();
+        if (subcommandGroup === 'courses' && subcommand === 'add') {
+          // Show modal IMMEDIATELY - no logging, no checks, just show it
+          await interaction.showModal(addCourseModalFactory());
+          // Only log after modal is shown (non-blocking)
+          setImmediate(() => {
+            logger.info(
+              `Modal shown for /admin courses add by ${interaction.user.tag}`
+            );
+          });
+          return; // Exit immediately - don't do anything else
+        }
+      } catch (error) {
+        // If modal check fails, fall through to normal handling
+        logger.error('Error in modal check:', error.message);
+      }
+    }
+
     const command = interaction.client.commands.get(interaction.commandName);
 
     if (!command) {
       logger.warn(`Command not found: ${interaction.commandName}`);
       return;
-    }
-
-    // CRITICAL: For /admin courses add, show modal IMMEDIATELY before any checks
-    // This must happen within 3 seconds or Discord times out
-    if (
-      interaction.commandName === 'admin' &&
-      interaction.options.getSubcommandGroup() === 'courses' &&
-      interaction.options.getSubcommand() === 'add'
-    ) {
-      // Show modal first, check permissions later in modal submission
-      try {
-        await interaction.showModal(addCourseModalFactory());
-        logger.info(
-          `Modal shown for /admin courses add by ${interaction.user.tag}`
-        );
-        return; // Exit immediately - don't do permission checks
-      } catch (error) {
-        logger.error('Failed to show modal:', error.message);
-        // If modal fails, fall through to normal handling
-      }
     }
 
     logger.info(
