@@ -14,29 +14,20 @@ module.exports = {
 
     // For commands that need database access, defer IMMEDIATELY to prevent timeout
     // This must happen before ANY other processing, even logging
-    const needsDatabase = ['join', 'leave', 'admin'].includes(
-      interaction.commandName
-    );
+    // Fire-and-forget: don't await to avoid any blocking
+    const { commandName } = interaction;
+    const needsDatabase = ['join', 'leave', 'admin'].includes(commandName);
     if (needsDatabase && !interaction.replied && !interaction.deferred) {
-      try {
-        await interaction.deferReply({ ephemeral: true });
-        logger.info(
-          `Deferred reply for ${interaction.commandName} from ${interaction.user.tag}`
-        );
-      } catch (deferError) {
+      // Start deferring immediately without waiting
+      interaction.deferReply({ ephemeral: true }).catch((deferError) => {
         logger.error(`Failed to defer reply: ${deferError.message}`);
-        logger.error(`Defer error stack: ${deferError.stack}`);
-        // Try to reply normally as fallback
-        try {
-          await interaction.reply({
-            content: '⏳ Processing...',
-            ephemeral: true,
-          });
-        } catch (replyError) {
-          logger.error(`Failed to reply as fallback: ${replyError.message}`);
-          return; // Can't communicate with Discord
-        }
-      }
+      });
+      // Small delay to let defer start, but don't block on it
+      await new Promise((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, 50);
+      });
     }
 
     logger.info(
