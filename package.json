@@ -8,6 +8,8 @@
     "dev": "nodemon index.js | pino-pretty",
     "deploy-commands": "node deploy-commands.js",
     "test": "ava",
+    "test:watch": "ava --watch",
+    "test:coverage": "c8 ava",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,md}\"",
