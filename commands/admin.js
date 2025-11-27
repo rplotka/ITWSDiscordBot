@@ -57,6 +57,25 @@ module.exports = {
     // Show modal immediately - must happen before any deferReply
     // Modals cannot be shown after deferring a reply
     if (subcommandGroup === 'courses' && subcommand === 'add') {
+      // Check if already deferred - if so, we can't show modal
+      if (interaction.deferred || interaction.replied) {
+        logger.error(
+          `Cannot show modal - interaction already ${
+            interaction.deferred ? 'deferred' : 'replied'
+          }`
+        );
+        try {
+          await interaction.editReply({
+            content:
+              '❌ Cannot show form - interaction already responded. Please try the command again.',
+            ephemeral: true,
+          });
+        } catch (replyError) {
+          logger.error('Failed to send error reply:', replyError);
+        }
+        return;
+      }
+
       try {
         await interaction.showModal(addCourseModalFactory());
         logger.info(
