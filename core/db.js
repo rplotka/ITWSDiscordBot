@@ -26,34 +26,41 @@ if (isUnixSocket && !databaseUrl.includes('sslmode=')) {
   logger.info('Detected Unix socket connection, disabling SSL');
 }
 
+// Build Sequelize config - don't include dialectOptions for Unix sockets
+const sequelizeConfig = {
+  logging: false,
+  dialect: 'postgres',
+  protocol: 'postgres',
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000,
+  },
+  query: {
+    timeout: 10000, // 10 second timeout for queries
+  },
+};
+
+// Only add SSL dialectOptions for TCP connections
+if (needsSSL) {
+  sequelizeConfig.dialectOptions = {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false,
+    },
+  };
+} else {
+  // For Unix sockets, explicitly set ssl to false in dialectOptions
+  sequelizeConfig.dialectOptions = {
+    ssl: false,
+  };
+}
+
 const sequelize =
   finalDatabaseUrl &&
   finalDatabaseUrl !== 'postgresql://user:password@host:port/database'
-    ? new Sequelize(finalDatabaseUrl, {
-        logging: false,
-        dialect: 'postgres',
-        protocol: 'postgres',
-        dialectOptions: needsSSL
-          ? {
-              ssl: {
-                require: true,
-                rejectUnauthorized: false,
-              },
-            }
-          : {
-              // Explicitly disable SSL for Unix socket connections
-              ssl: false,
-            },
-        pool: {
-          max: 5,
-          min: 0,
-          acquire: 30000,
-          idle: 10000,
-        },
-        query: {
-          timeout: 10000, // 10 second timeout for queries
-        },
-      })
+    ? new Sequelize(finalDatabaseUrl, sequelizeConfig)
     : null;
 
 // Only define models if sequelize is initialized
