@@ -54,8 +54,31 @@ module.exports = {
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
 
+    // Show modal immediately - must happen before any deferReply
+    // Modals cannot be shown after deferring a reply
     if (subcommandGroup === 'courses' && subcommand === 'add') {
-      await interaction.showModal(addCourseModalFactory());
+      try {
+        await interaction.showModal(addCourseModalFactory());
+        logger.info(
+          `Modal shown for /admin courses add by ${interaction.user.tag}`
+        );
+      } catch (error) {
+        logger.error('Error showing modal:', error);
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error stack: ${error.stack}`);
+        // If modal fails, try to reply with error
+        if (!interaction.replied && !interaction.deferred) {
+          try {
+            await interaction.reply({
+              content:
+                '❌ Failed to show course creation form. Please contact a Moderator!',
+              ephemeral: true,
+            });
+          } catch (replyError) {
+            logger.error('Failed to send error reply:', replyError);
+          }
+        }
+      }
       return;
     }
 
