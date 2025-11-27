@@ -1,6 +1,7 @@
 // JSDoc types: CommandInteraction
 const { PermissionFlagsBits } = require('discord.js');
 const logger = require('../core/logging');
+const { addCourseModalFactory } = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -27,6 +28,38 @@ module.exports = {
         command.isModeratorOnly || false
       }`
     );
+
+    // Special case: /admin courses add needs to show modal IMMEDIATELY
+    // Modals must be shown within 3 seconds, so we check and show before permission checks
+    if (
+      interaction.commandName === 'admin' &&
+      interaction.options.getSubcommandGroup() === 'courses' &&
+      interaction.options.getSubcommand() === 'add'
+    ) {
+      // Quick permission check first
+      if (interaction.member?.permissions) {
+        const hasAdmin = interaction.member.permissions.has(
+          PermissionFlagsBits.Administrator
+        );
+        const hasManageGuild = interaction.member.permissions.has(
+          PermissionFlagsBits.ManageGuild
+        );
+        if (hasAdmin || hasManageGuild) {
+          // Show modal immediately - must happen within 3 seconds
+          try {
+            await interaction.showModal(addCourseModalFactory());
+            logger.info(
+              `Modal shown immediately for /admin courses add by ${interaction.user.tag}`
+            );
+            return;
+          } catch (error) {
+            logger.error('Error showing modal immediately:', error);
+            // Fall through to normal error handling
+          }
+        }
+      }
+      // If permission check fails, fall through to normal permission handling
+    }
 
     // Check permissions - do this quickly to avoid interaction timeout
     if (command.isModeratorOnly) {
