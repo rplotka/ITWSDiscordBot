@@ -16,6 +16,17 @@ if (
 // Unix socket connections use host=/cloudsql/... format
 const isUnixSocket = databaseUrl && databaseUrl.includes('host=/cloudsql/');
 
+// For Unix socket connections, ensure sslmode=disable is in the connection string
+let finalDatabaseUrl = databaseUrl;
+if (isUnixSocket && !databaseUrl.includes('sslmode=')) {
+  // Add sslmode=disable to the connection string if not already present
+  const separator = databaseUrl.includes('?') ? '&' : '?';
+  finalDatabaseUrl = `${databaseUrl}${separator}sslmode=disable`;
+  logger.info(
+    'Added sslmode=disable to Cloud SQL Unix socket connection string'
+  );
+}
+
 // Build Sequelize configuration
 const sequelizeConfig = {
   logging: false,
@@ -23,7 +34,7 @@ const sequelizeConfig = {
   protocol: 'postgres',
 };
 
-// For Unix socket connections (Cloud SQL), disable SSL
+// For Unix socket connections (Cloud SQL), explicitly disable SSL
 // For regular connections, enable SSL
 if (!isUnixSocket) {
   sequelizeConfig.dialectOptions = {
@@ -33,16 +44,19 @@ if (!isUnixSocket) {
     },
   };
 } else {
-  // For Unix sockets, explicitly disable SSL and omit dialectOptions.ssl
-  // The connection string should already have sslmode=disable, but we ensure
-  // no SSL options are set in dialectOptions
-  sequelizeConfig.dialectOptions = {};
-  logger.info('Detected Cloud SQL Unix socket connection - SSL disabled');
+  // For Unix sockets, explicitly disable SSL in dialectOptions
+  sequelizeConfig.dialectOptions = {
+    ssl: false,
+  };
+  logger.info(
+    'Detected Cloud SQL Unix socket connection - SSL explicitly disabled'
+  );
 }
 
 const sequelize =
-  databaseUrl && databaseUrl !== 'postgresql://user:password@host:port/database'
-    ? new Sequelize(databaseUrl, sequelizeConfig)
+  finalDatabaseUrl &&
+  finalDatabaseUrl !== 'postgresql://user:password@host:port/database'
+    ? new Sequelize(finalDatabaseUrl, sequelizeConfig)
     : null;
 
 // Only define models if sequelize is initialized
