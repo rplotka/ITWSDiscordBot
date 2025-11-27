@@ -187,10 +187,22 @@ module.exports = {
         'Created course Discord roles and channels but failed to save Course in DB...'
       );
       logger.error(`Error message: ${error.message}`);
+      logger.error(`Error name: ${error.name}`);
       logger.error(`Error stack: ${error.stack}`);
+
+      // Try to provide more helpful error message
+      let errorMsg = error.message;
+      if (error.name === 'SequelizeValidationError') {
+        errorMsg = `Validation error: ${
+          error.errors?.map((e) => e.message).join(', ') || error.message
+        }`;
+      } else if (error.name === 'SequelizeDatabaseError') {
+        errorMsg = `Database error: ${error.message}`;
+      }
+
       await interaction.editReply({
         ephemeral: true,
-        content: `❌ Created roles and channels but failed to save to database: ${error.message}. Please contact a Moderator!`,
+        content: `❌ Created roles and channels but failed to save to database: ${errorMsg}. Please contact a Moderator!`,
       });
       return;
     }
