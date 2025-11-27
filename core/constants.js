@@ -1,3 +1,5 @@
+const { PermissionFlagsBits } = require('discord.js');
+
 const SERVER_ID = process.env.DISCORD_SERVER_ID;
 
 /**
@@ -41,74 +43,83 @@ module.exports.coursePermissions = {
     // Block everyone by default from seeing the channel
     {
       id: SERVER_ID,
-      deny: ['VIEW_CHANNEL'],
+      deny: [PermissionFlagsBits.ViewChannel],
     },
     // {
     //   id: ADMIN_ROLE_ID,
-    //   allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+    //   allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
     // },
     // Let everyone in the course see and send in the channel
     {
       id: courseRoleId,
-      allow: ['VIEW_CHANNEL', 'SEND_MESSAGES', 'READ_MESSAGE_HISTORY'],
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+      ],
     },
     // Let instructors also manage messages in the channel
     {
       id: courseInstructorRoleId,
-      allow: ['MANAGE_MESSAGES'],
+      allow: [PermissionFlagsBits.ManageMessages],
     },
   ],
   announcements: (courseInstructorRoleId, courseRoleId) => [
     // Block everyone by default from seeing the channel
     {
       id: SERVER_ID,
-      deny: ['VIEW_CHANNEL'],
+      deny: [PermissionFlagsBits.ViewChannel],
     },
     // Course students can only read messages
     {
       id: courseRoleId,
-      deny: ['SEND_MESSAGES'],
-      allow: ['VIEW_CHANNEL', 'READ_MESSAGE_HISTORY'],
+      deny: [PermissionFlagsBits.SendMessages],
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
+      ],
     },
     // Only instructors can send messages
     {
       id: courseInstructorRoleId,
-      allow: ['SEND_MESSAGES', 'MANAGE_MESSAGES'],
+      allow: [
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ManageMessages,
+      ],
     },
   ],
   team: (courseInstructorRoleId, courseRoleId, teamRoleId) => [
     // Block everyone by default from seeing the channel
     {
       id: SERVER_ID,
-      deny: ['VIEW_CHANNEL'],
+      deny: [PermissionFlagsBits.ViewChannel],
     },
     // Block course students from seeing the channel
     {
       id: courseRoleId,
-      deny: ['VIEW_CHANNEL'],
+      deny: [PermissionFlagsBits.ViewChannel],
     },
     // Allow course instructor to see, send, and manage messages
     {
       id: courseInstructorRoleId,
       allow: [
-        'VIEW_CHANNEL',
-        'SEND_MESSAGES',
-        'MANAGE_MESSAGES',
-        'READ_MESSAGE_HISTORY',
-        'CONNECT',
-        'SPEAK',
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ManageMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak,
       ],
     },
     // Allow team members to see and send messages
     {
       id: teamRoleId,
       allow: [
-        'VIEW_CHANNEL',
-        'SEND_MESSAGES',
-        'READ_MESSAGE_HISTORY',
-        'VIEW_CHANNEL',
-        'CONNECT',
-        'SPEAK',
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.Connect,
+        PermissionFlagsBits.Speak,
       ],
     },
   ],
