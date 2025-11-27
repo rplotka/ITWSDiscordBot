@@ -215,18 +215,19 @@ module.exports = {
       }
 
       // Send success message - use simpler format to avoid any formatting issues
-      try {
-        const successMessage =
-          `🎉 **Created course, roles, and channels!**\n\n` +
-          `Course: **${newCourse.title}**\n` +
-          `Role ID: \`${newCourse.discordInstructorRoleId}\`\n\n` +
-          `Now assign the instructor role to all instructors. You will see the course category and channels in the sidebar.`;
+      const successMessage =
+        `🎉 **Created course, roles, and channels!**\n\n` +
+        `Course: **${newCourse.title}**\n` +
+        `Instructor Role ID: \`${newCourse.discordInstructorRoleId}\`\n` +
+        `Course Role ID: \`${newCourse.discordRoleId}\`\n\n` +
+        `Now assign the instructor role to all instructors. You will see the course category and channels in the sidebar.`;
 
+      try {
         await interaction.editReply({
           content: successMessage,
         });
         logger.info(
-          `Successfully sent completion message for course '${newCourse.title}'`
+          `✅ Successfully completed course creation for '${newCourse.title}'`
         );
       } catch (error) {
         logger.error(
@@ -238,7 +239,7 @@ module.exports = {
         // Try to send a simpler message
         try {
           await interaction.followUp({
-            content: `✅ Course '${newCourse.title}' created successfully! Role ID: ${newCourse.discordInstructorRoleId}`,
+            content: `✅ Course '${newCourse.title}' created successfully!`,
             ephemeral: true,
           });
         } catch (followUpError) {
