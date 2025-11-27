@@ -14,20 +14,34 @@ module.exports = {
 
     // For commands that need database access, defer IMMEDIATELY to prevent timeout
     // This must happen before ANY other processing, even logging
-    // Fire-and-forget: don't await to avoid any blocking
+    // We MUST await this to ensure Discord gets the acknowledgment
     const { commandName } = interaction;
     const needsDatabase = ['join', 'leave', 'admin'].includes(commandName);
     if (needsDatabase && !interaction.replied && !interaction.deferred) {
-      // Start deferring immediately without waiting
-      interaction.deferReply({ ephemeral: true }).catch((deferError) => {
+      try {
+        // Use Promise.race to timeout deferReply if it takes too long
+        await Promise.race([
+          interaction.deferReply({ ephemeral: true }),
+          new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('deferReply timeout'));
+            }, 2000);
+          }),
+        ]);
+        logger.info(`Deferred reply for ${commandName}`);
+      } catch (deferError) {
         logger.error(`Failed to defer reply: ${deferError.message}`);
-      });
-      // Small delay to let defer start, but don't block on it
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve();
-        }, 50);
-      });
+        // If defer fails, try immediate reply as fallback
+        try {
+          await interaction.reply({
+            content: '⏳ Processing...',
+            ephemeral: true,
+          });
+        } catch (replyError) {
+          logger.error(`Failed to reply as fallback: ${replyError.message}`);
+          return; // Can't communicate with Discord
+        }
+      }
     }
 
     logger.info(
