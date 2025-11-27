@@ -111,6 +111,17 @@ module.exports = {
 
     logger.info(`${interaction.member} submitted the new course modal`);
 
+    // Check if database is available
+    if (!Course) {
+      logger.error('Course model not available - database not connected');
+      await interaction.editReply({
+        ephemeral: true,
+        content:
+          '❌ Database is not available. Channels were created but course was not saved. Please contact a Moderator!',
+      });
+      return;
+    }
+
     const val = (fieldName) => interaction.fields.getTextInputValue(fieldName);
 
     const title = val('add-course-modal-title');
