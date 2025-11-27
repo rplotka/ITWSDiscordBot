@@ -28,6 +28,21 @@ module.exports = {
       }`
     );
 
+    // For commands that need database access, defer IMMEDIATELY to prevent timeout
+    // This must happen before any other processing
+    const needsDatabase = ['join', 'leave', 'admin'].includes(
+      interaction.commandName
+    );
+    if (needsDatabase && !interaction.replied && !interaction.deferred) {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+        logger.info(`Deferred reply for ${interaction.commandName}`);
+      } catch (deferError) {
+        logger.error(`Failed to defer reply: ${deferError.message}`);
+        // Continue anyway - command might handle its own reply
+      }
+    }
+
     // Check permissions - do this quickly to avoid interaction timeout
     if (command.isModeratorOnly) {
       try {
@@ -96,15 +111,6 @@ module.exports = {
       logger.info(
         `${interaction.user} issued command '${interaction.commandName}'`
       );
-
-      // For commands that need database access, defer immediately to prevent timeout
-      // This is especially important for /join, /leave, and /admin commands
-      const needsDatabase = ['join', 'leave', 'admin'].includes(
-        interaction.commandName
-      );
-      if (needsDatabase && !interaction.replied && !interaction.deferred) {
-        await interaction.deferReply({ ephemeral: true });
-      }
 
       await command.execute(interaction);
     } catch (error) {

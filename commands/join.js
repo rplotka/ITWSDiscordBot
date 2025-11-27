@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { Op } = require('sequelize');
-const { Course, CourseTeam, sequelize } = require('../core/db');
+const { Course, CourseTeam } = require('../core/db');
 const {
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,
@@ -48,23 +48,7 @@ module.exports = {
       return;
     }
 
-    // Check if database connection is actually established (quick check)
-    if (sequelize) {
-      try {
-        // Quick connection check with timeout
-        const authPromise = sequelize.authenticate();
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Connection check timeout')), 2000);
-        });
-        await Promise.race([authPromise, timeoutPromise]);
-      } catch (authError) {
-        logger.error('Database authentication failed:', authError);
-        await interaction.editReply({
-          content: '❌ Database connection failed. Please contact a Moderator!',
-        });
-        return;
-      }
-    }
+    // Skip connection check - it's too slow, let the query timeout handle it
 
     const target = interaction.options.getSubcommand(); // "course" or "team"
 
