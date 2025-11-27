@@ -131,8 +131,8 @@ Use this checklist to systematically test all bot commands. Test each command an
 
 ## Results
 
-Date: ******\_\_\_******
-Tester: ******\_\_\_******
+Date: **\*\***\_\_\_**\*\***
+Tester: **\*\***\_\_\_**\*\***
 
 | Command                 | Status            | Notes |
 | ----------------------- | ----------------- | ----- |
