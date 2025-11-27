@@ -32,7 +32,7 @@ jobs:
       
       - name: Run tests
         run: npm test
-        continue-on-error: true
+        continue-on-error: false
       
       - name: Security audit
         run: npm run security:audit

@@ -91,7 +91,7 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
-    logger.info(`${interaction.member} submited the new course modal`);
+    logger.info(`${interaction.member} submitted the new course modal`);
 
     const val = (fieldName) => interaction.fields.getTextInputValue(fieldName);
 
