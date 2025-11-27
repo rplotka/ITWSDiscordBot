@@ -22,6 +22,15 @@ module.exports = {
     // Defer reply to prevent timeout during database queries
     await interaction.deferReply({ ephemeral: true });
 
+    // Check if database is available
+    if (!Course || !CourseTeam) {
+      logger.error('Database models not available');
+      await interaction.editReply({
+        content: '❌ Database is not available. Please contact a Moderator!',
+      });
+      return;
+    }
+
     const target = interaction.options.getSubcommand(); // "course" or "team"
 
     const memberRoleIds = interaction.member.roles.cache.map((role) => role.id);

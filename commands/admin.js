@@ -62,6 +62,16 @@ module.exports = {
     // Defer reply for commands that need database queries
     if (subcommandGroup === 'courses' && subcommand === 'remove') {
       await interaction.deferReply({ ephemeral: true });
+
+      // Check if database is available
+      if (!Course || !CourseTeam) {
+        logger.error('Database models not available');
+        await interaction.editReply({
+          content: '❌ Database is not available. Please contact a Moderator!',
+        });
+        return;
+      }
+
       try {
         // Generate list of courses
         const courses = await Course.findAll({
