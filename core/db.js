@@ -43,6 +43,7 @@ const sequelizeConfig = {
 };
 
 // Only add SSL dialectOptions for TCP connections
+// For Unix sockets, omit dialectOptions entirely to prevent SSL attempts
 if (needsSSL) {
   sequelizeConfig.dialectOptions = {
     ssl: {
@@ -50,12 +51,8 @@ if (needsSSL) {
       rejectUnauthorized: false,
     },
   };
-} else {
-  // For Unix sockets, explicitly set ssl to false in dialectOptions
-  sequelizeConfig.dialectOptions = {
-    ssl: false,
-  };
 }
+// For Unix sockets, don't set dialectOptions at all - let pg library handle it
 
 const sequelize =
   finalDatabaseUrl &&
