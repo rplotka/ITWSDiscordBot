@@ -67,12 +67,13 @@ async function createCourseChannels(guild, course) {
     permissionOverwrites: announcementPermissions,
   });
 
-  // General channel
+  // General channel - use base permissions
   await guild.channels.create({
     name: 'general',
     type: ChannelType.GuildText,
     topic: courseChannelTopics.general(course),
     parent: courseCategory.id,
+    permissionOverwrites: basePermissions,
   });
 }
 
@@ -135,42 +136,50 @@ module.exports = {
 
     try {
       await createCourseRoles(interaction.guild, newCourse);
+      logger.info(`Successfully created roles for course '${newCourse.title}'`);
     } catch (error) {
       logger.error(
         `Failed to create course roles for new course '${newCourse.title}'`
       );
-      logger.error(error);
+      logger.error(`Error message: ${error.message}`);
+      logger.error(`Error stack: ${error.stack}`);
       await interaction.editReply({
         ephemeral: true,
-        content: `❌ Something went wrong... Please contact a Moderator!`,
+        content: `❌ Failed to create roles: ${error.message}. Please contact a Moderator!`,
       });
       return;
     }
 
     try {
       await createCourseChannels(interaction.guild, newCourse);
+      logger.info(
+        `Successfully created channels for course '${newCourse.title}'`
+      );
     } catch (error) {
       logger.error(
         `Failed to create course channels for new course '${newCourse.title}'`
       );
-      logger.error(error);
+      logger.error(`Error message: ${error.message}`);
+      logger.error(`Error stack: ${error.stack}`);
       await interaction.editReply({
         ephemeral: true,
-        content: `❌ Something went wrong... Please contact a Moderator!`,
+        content: `❌ Failed to create channels: ${error.message}. Please contact a Moderator!`,
       });
       return;
     }
 
     try {
       await newCourse.save();
+      logger.info(`Successfully saved course '${newCourse.title}' to database`);
     } catch (error) {
       logger.error(
         'Created course Discord roles and channels but failed to save Course in DB...'
       );
-      logger.error(error);
+      logger.error(`Error message: ${error.message}`);
+      logger.error(`Error stack: ${error.stack}`);
       await interaction.editReply({
         ephemeral: true,
-        content: `❌ Something went wrong... Please contact a Moderator!`,
+        content: `❌ Created roles and channels but failed to save to database: ${error.message}. Please contact a Moderator!`,
       });
       return;
     }
