@@ -17,9 +17,19 @@ if (
 const isUnixSocket = databaseUrl && databaseUrl.includes('host=/cloudsql/');
 const needsSSL = !isUnixSocket; // Only use SSL for TCP connections
 
+// Parse connection string to add sslmode=disable for Unix sockets
+let finalDatabaseUrl = databaseUrl;
+if (isUnixSocket && !databaseUrl.includes('sslmode=')) {
+  // Add sslmode=disable to the connection string for Unix socket connections
+  const separator = databaseUrl.includes('?') ? '&' : '?';
+  finalDatabaseUrl = `${databaseUrl}${separator}sslmode=disable`;
+  logger.info('Detected Unix socket connection, disabling SSL');
+}
+
 const sequelize =
-  databaseUrl && databaseUrl !== 'postgresql://user:password@host:port/database'
-    ? new Sequelize(databaseUrl, {
+  finalDatabaseUrl &&
+  finalDatabaseUrl !== 'postgresql://user:password@host:port/database'
+    ? new Sequelize(finalDatabaseUrl, {
         logging: false,
         dialect: 'postgres',
         protocol: 'postgres',
@@ -30,7 +40,10 @@ const sequelize =
                 rejectUnauthorized: false,
               },
             }
-          : {}, // No SSL for Unix socket connections
+          : {
+              // Explicitly disable SSL for Unix socket connections
+              ssl: false,
+            },
         pool: {
           max: 5,
           min: 0,
