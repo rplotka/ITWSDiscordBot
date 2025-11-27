@@ -16,25 +16,24 @@ module.exports = {
     // CRITICAL: For /admin courses add, show modal IMMEDIATELY - FIRST THING
     // Check this BEFORE any other processing to save precious milliseconds
     // This must happen within 3 seconds or Discord times out
-    if (interaction.commandName === 'admin') {
-      try {
-        const subcommandGroup = interaction.options.getSubcommandGroup();
-        const subcommand = interaction.options.getSubcommand();
-        if (subcommandGroup === 'courses' && subcommand === 'add') {
-          // Show modal IMMEDIATELY - no logging, no checks, just show it
-          await interaction.showModal(addCourseModalFactory());
-          // Only log after modal is shown (non-blocking)
-          setImmediate(() => {
-            logger.info(
-              `Modal shown for /admin courses add by ${interaction.user.tag}`
-            );
-          });
-          return; // Exit immediately - don't do anything else
-        }
-      } catch (error) {
-        // If modal check fails, fall through to normal handling
-        logger.error('Error in modal check:', error.message);
-      }
+    // Use minimal checks - just command name and inline subcommand check
+    if (
+      interaction.commandName === 'admin' &&
+      interaction.options.getSubcommandGroup(false) === 'courses' &&
+      interaction.options.getSubcommand(false) === 'add'
+    ) {
+      // Show modal IMMEDIATELY - fire and return, don't await
+      interaction
+        .showModal(addCourseModalFactory())
+        .then(() => {
+          logger.info(
+            `Modal shown for /admin courses add by ${interaction.user.tag}`
+          );
+        })
+        .catch((error) => {
+          logger.error('Failed to show modal:', error.message);
+        });
+      return; // Exit immediately - don't wait for modal
     }
 
     const command = interaction.client.commands.get(interaction.commandName);
