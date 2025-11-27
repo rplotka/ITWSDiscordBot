@@ -61,7 +61,10 @@ module.exports = {
 
     // Defer reply for commands that need database queries
     if (subcommandGroup === 'courses' && subcommand === 'remove') {
-      await interaction.deferReply({ ephemeral: true });
+      // Defer reply if not already deferred (should be deferred by command handler)
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
+      }
 
       // Check if database is available
       if (!Course || !CourseTeam) {
@@ -73,10 +76,21 @@ module.exports = {
       }
 
       try {
-        // Generate list of courses
-        const courses = await Course.findAll({
-          include: [{ model: CourseTeam, as: 'CourseTeams' }],
-        });
+        // Generate list of courses with timeout wrapper
+        const withTimeout = (queryPromise, timeoutMs = 8000) => {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('Database query timed out'));
+            }, timeoutMs);
+          });
+          return Promise.race([queryPromise, timeoutPromise]);
+        };
+
+        const courses = await withTimeout(
+          Course.findAll({
+            include: [{ model: CourseTeam, as: 'CourseTeams' }],
+          })
+        );
         const row = courseSelectorActionRowFactory('remove', courses);
 
         // Discord gets mad if we send a select menu with no options so we check for that
@@ -96,8 +110,20 @@ module.exports = {
         });
       } catch (error) {
         logger.error('Error in /admin courses remove command:', error);
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error stack: ${error.stack}`);
+
+        let errorMessage =
+          '❌ Something went wrong... Please contact a Moderator!';
+        if (error.message && error.message.includes('timed out')) {
+          errorMessage =
+            '❌ Database query timed out. The database may be slow or unavailable. Please try again or contact a Moderator!';
+        } else if (error.message) {
+          errorMessage = `❌ Error: ${error.message}. Please contact a Moderator!`;
+        }
+
         await interaction.editReply({
-          content: '❌ Something went wrong... Please contact a Moderator!',
+          content: errorMessage,
         });
       }
     } else {
