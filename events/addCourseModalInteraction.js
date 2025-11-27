@@ -207,8 +207,28 @@ module.exports = {
       return;
     }
 
-    await interaction.editReply({
-      content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
-    });
+    try {
+      await interaction.editReply({
+        content: `🎉 **Created course, roles, and channels!** Now assign the <@&${newCourse.discordInstructorRoleId}> role to all instructors. You will see the course category and channels in the sidebar.`,
+      });
+      logger.info(
+        `Successfully sent completion message for course '${newCourse.title}'`
+      );
+    } catch (error) {
+      logger.error(
+        `Failed to send success message for course '${newCourse.title}'`
+      );
+      logger.error(`Error message: ${error.message}`);
+      logger.error(`Error stack: ${error.stack}`);
+      // Try to send a simpler message
+      try {
+        await interaction.followUp({
+          content: `✅ Course '${newCourse.title}' created successfully!`,
+          ephemeral: true,
+        });
+      } catch (followUpError) {
+        logger.error('Failed to send follow-up message:', followUpError);
+      }
+    }
   },
 };
