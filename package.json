@@ -41,7 +41,7 @@
     "sequelize": "^6.20.1"
   },
   "devDependencies": {
-    "ava": "^4.2.0",
+    "ava": "^6.4.1",
     "eslint": "^8.16.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
