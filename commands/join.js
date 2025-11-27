@@ -7,6 +7,21 @@ const {
 } = require('../core/utils');
 const logger = require('../core/logging');
 
+/**
+ * Wraps a database query with a timeout
+ * @param {Promise} queryPromise - The database query promise
+ * @param {number} timeoutMs - Timeout in milliseconds (default: 8000)
+ * @returns {Promise} The query result or throws timeout error
+ */
+function withTimeout(queryPromise, timeoutMs = 8000) {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error('Database query timed out'));
+    }, timeoutMs);
+  });
+  return Promise.race([queryPromise, timeoutPromise]);
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('join')
@@ -37,13 +52,16 @@ module.exports = {
 
     try {
       if (target === 'course') {
-        const courses = await Course.findAll({
-          where: {
-            discordRoleId: {
-              [Op.notIn]: memberRoleIds,
+        // Add timeout wrapper for database query
+        const courses = await withTimeout(
+          Course.findAll({
+            where: {
+              discordRoleId: {
+                [Op.notIn]: memberRoleIds,
+              },
             },
-          },
-        });
+          })
+        );
         const row = courseSelectorActionRowFactory('join', courses);
 
         // Discord gets mad if we send a select menu with no options so we check for that
@@ -63,30 +81,34 @@ module.exports = {
         });
       } else if (target === 'team') {
         // Find the course teams that are for the courses the member is in and aren't currently in
-        const courseTeams = await CourseTeam.findAll({
-          where: {
-            '$Course.discordRoleId$': {
-              [Op.in]: memberRoleIds,
+        const courseTeams = await withTimeout(
+          CourseTeam.findAll({
+            where: {
+              '$Course.discordRoleId$': {
+                [Op.in]: memberRoleIds,
+              },
+              discordRoleId: {
+                [Op.notIn]: memberRoleIds,
+              },
             },
-            discordRoleId: {
-              [Op.notIn]: memberRoleIds,
-            },
-          },
-          include: [{ model: Course, as: 'Course' }],
-        });
+            include: [{ model: Course, as: 'Course' }],
+          })
+        );
 
         // Generate select menu of these teams
         const row = courseTeamSelectorActionRowFactory('join', courseTeams);
 
         // Discord gets mad if we send a select menu with no options so we check for that
         if (courseTeams.length === 0) {
-          const currentCourses = await Course.findAll({
-            where: {
-              discordRoleId: {
-                [Op.in]: memberRoleIds,
+          const currentCourses = await withTimeout(
+            Course.findAll({
+              where: {
+                discordRoleId: {
+                  [Op.in]: memberRoleIds,
+                },
               },
-            },
-          });
+            })
+          );
           await interaction.editReply({
             content: `ℹ️ There are no teams in your courses **${currentCourses
               .map((course) => course.title)
@@ -105,8 +127,20 @@ module.exports = {
       }
     } catch (error) {
       logger.error(`Error in /join ${target} command:`, error);
+      logger.error(`Error message: ${error.message}`);
+      logger.error(`Error stack: ${error.stack}`);
+
+      let errorMessage =
+        '❌ Something went wrong... Please contact a Moderator!';
+      if (error.message && error.message.includes('timed out')) {
+        errorMessage =
+          '❌ Database query timed out. The database may be slow or unavailable. Please try again or contact a Moderator!';
+      } else if (error.message) {
+        errorMessage = `❌ Error: ${error.message}. Please contact a Moderator!`;
+      }
+
       await interaction.editReply({
-        content: '❌ Something went wrong... Please contact a Moderator!',
+        content: errorMessage,
       });
     }
   },
