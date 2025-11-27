@@ -19,27 +19,24 @@ module.exports = {
     const needsDatabase = ['join', 'leave', 'admin'].includes(commandName);
     if (needsDatabase && !interaction.replied && !interaction.deferred) {
       try {
-        // Use Promise.race to timeout deferReply if it takes too long
-        await Promise.race([
-          interaction.deferReply({ ephemeral: true }),
-          new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('deferReply timeout'));
-            }, 2000);
-          }),
-        ]);
+        // Defer immediately - don't timeout, let it take as long as needed
+        // Discord gives us 3 seconds, so we need to respond quickly
+        await interaction.deferReply({ ephemeral: true });
         logger.info(`Deferred reply for ${commandName}`);
       } catch (deferError) {
         logger.error(`Failed to defer reply: ${deferError.message}`);
+        logger.error(`Defer error stack: ${deferError.stack}`);
         // If defer fails, try immediate reply as fallback
         try {
           await interaction.reply({
             content: '⏳ Processing...',
             ephemeral: true,
           });
+          logger.info(`Sent fallback reply for ${commandName}`);
         } catch (replyError) {
           logger.error(`Failed to reply as fallback: ${replyError.message}`);
-          return; // Can't communicate with Discord
+          // Can't communicate with Discord - return early
+          return;
         }
       }
     }
