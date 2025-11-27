@@ -31,34 +31,56 @@ module.exports = {
 
     // Special case: /admin courses add needs to show modal IMMEDIATELY
     // Modals must be shown within 3 seconds, so we check and show before permission checks
-    if (
-      interaction.commandName === 'admin' &&
-      interaction.options.getSubcommandGroup() === 'courses' &&
-      interaction.options.getSubcommand() === 'add'
-    ) {
-      // Quick permission check first
-      if (interaction.member?.permissions) {
-        const hasAdmin = interaction.member.permissions.has(
-          PermissionFlagsBits.Administrator
+    if (interaction.commandName === 'admin') {
+      try {
+        const subcommandGroup = interaction.options.getSubcommandGroup();
+        const subcommand = interaction.options.getSubcommand();
+        logger.info(
+          `Admin command - subcommandGroup: ${subcommandGroup}, subcommand: ${subcommand}`
         );
-        const hasManageGuild = interaction.member.permissions.has(
-          PermissionFlagsBits.ManageGuild
-        );
-        if (hasAdmin || hasManageGuild) {
-          // Show modal immediately - must happen within 3 seconds
-          try {
-            await interaction.showModal(addCourseModalFactory());
-            logger.info(
-              `Modal shown immediately for /admin courses add by ${interaction.user.tag}`
+
+        if (subcommandGroup === 'courses' && subcommand === 'add') {
+          // Quick permission check first
+          if (interaction.member?.permissions) {
+            const hasAdmin = interaction.member.permissions.has(
+              PermissionFlagsBits.Administrator
             );
-            return;
-          } catch (error) {
-            logger.error('Error showing modal immediately:', error);
-            // Fall through to normal error handling
+            const hasManageGuild = interaction.member.permissions.has(
+              PermissionFlagsBits.ManageGuild
+            );
+            logger.info(
+              `Permission check for modal: ADMIN=${hasAdmin}, MANAGE_GUILD=${hasManageGuild}`
+            );
+            if (hasAdmin || hasManageGuild) {
+              // Show modal immediately - must happen within 3 seconds
+              try {
+                await interaction.showModal(addCourseModalFactory());
+                logger.info(
+                  `✅ Modal shown immediately for /admin courses add by ${interaction.user.tag}`
+                );
+                return; // Exit early - don't execute command
+              } catch (error) {
+                logger.error('Error showing modal immediately:', error);
+                logger.error(`Error message: ${error.message}`);
+                logger.error(`Error stack: ${error.stack}`);
+                // Fall through to normal error handling
+              }
+            } else {
+              logger.warn(
+                `User ${interaction.user.tag} lacks permissions for /admin courses add`
+              );
+            }
+          } else {
+            logger.warn(
+              `No permissions object for user ${interaction.user.tag}`
+            );
           }
+          // If we get here, permission check failed - fall through to normal handling
         }
+      } catch (error) {
+        logger.error('Error checking subcommand for modal:', error);
+        // Fall through to normal command execution
       }
-      // If permission check fails, fall through to normal permission handling
     }
 
     // Check permissions - do this quickly to avoid interaction timeout
