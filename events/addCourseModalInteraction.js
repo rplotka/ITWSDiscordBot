@@ -250,24 +250,29 @@ module.exports = {
     } catch (error) {
       // Catch any unhandled errors in the entire function
       logger.error('Unhandled error in addCourseModalInteraction:', error);
-      logger.error(`Error message: ${error.message}`);
-      logger.error(`Error stack: ${error.stack}`);
+      logger.error(`Error message: ${error.message || 'No error message'}`);
+      logger.error(`Error name: ${error.name || 'Unknown'}`);
+      logger.error(`Error stack: ${error.stack || 'No stack trace'}`);
 
       // Try to send error message if interaction is still valid
       try {
+        const errorMessage = error.message || 'Unknown error occurred';
+        const errorContent = `❌ An unexpected error occurred: ${errorMessage}. Please contact a Moderator!`;
+
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply({
-            content: `❌ An unexpected error occurred: ${error.message}. Please contact a Moderator!`,
+            content: errorContent,
             ephemeral: true,
           });
         } else {
           await interaction.reply({
-            content: `❌ An unexpected error occurred: ${error.message}. Please contact a Moderator!`,
+            content: errorContent,
             ephemeral: true,
           });
         }
       } catch (replyError) {
         logger.error('Failed to send error message:', replyError);
+        logger.error(`Reply error: ${replyError.message}`);
       }
     }
   },
