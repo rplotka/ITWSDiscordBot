@@ -1,7 +1,6 @@
 // JSDoc types: CommandInteraction
 const { PermissionFlagsBits } = require('discord.js');
 const logger = require('../core/logging');
-const { addCourseModalFactory } = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -12,42 +11,6 @@ module.exports = {
    */
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
-
-    // CRITICAL: /admin courses add must show modal IMMEDIATELY (within 3 seconds)
-    // Do this BEFORE any logging or other processing to save time
-    if (interaction.commandName === 'admin') {
-      try {
-        const subcommandGroup = interaction.options.getSubcommandGroup();
-        const subcommand = interaction.options.getSubcommand();
-        if (subcommandGroup === 'courses' && subcommand === 'add') {
-          // Ultra-fast permission check - no logging until after modal
-          if (
-            interaction.member?.permissions?.has(
-              PermissionFlagsBits.Administrator
-            ) ||
-            interaction.member?.permissions?.has(
-              PermissionFlagsBits.ManageGuild
-            )
-          ) {
-            // Show modal IMMEDIATELY - no await, fire and return
-            interaction
-              .showModal(addCourseModalFactory())
-              .then(() => {
-                logger.info(
-                  `✅ Modal shown for /admin courses add by ${interaction.user.tag}`
-                );
-              })
-              .catch((error) => {
-                logger.error('Error showing modal:', error);
-              });
-            return; // Exit immediately - don't wait for modal to complete
-          }
-        }
-      } catch (error) {
-        // If anything fails, fall through to normal handling
-        logger.error('Error in modal check:', error);
-      }
-    }
 
     logger.info(
       `Received interaction: ${interaction.commandName} from ${interaction.user.tag}`

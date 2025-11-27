@@ -54,51 +54,34 @@ module.exports = {
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
 
-    // Show modal immediately - must happen before any deferReply
-    // Modals cannot be shown after deferring a reply
+    // CRITICAL: /admin courses add - Show modal IMMEDIATELY, no checks, no logging
+    // This must be the FIRST thing we do - Discord gives us 3 seconds
     if (subcommandGroup === 'courses' && subcommand === 'add') {
-      // Check if already deferred - if so, we can't show modal
-      if (interaction.deferred || interaction.replied) {
-        logger.error(
-          `Cannot show modal - interaction already ${
-            interaction.deferred ? 'deferred' : 'replied'
-          }`
-        );
-        try {
-          await interaction.editReply({
-            content:
-              '❌ Cannot show form - interaction already responded. Please try the command again.',
-            ephemeral: true,
-          });
-        } catch (replyError) {
-          logger.error('Failed to send error reply:', replyError);
-        }
-        return;
-      }
-
+      // Show modal immediately - don't check anything first, just show it
       try {
         await interaction.showModal(addCourseModalFactory());
+        // Only log after modal is shown
         logger.info(
           `Modal shown for /admin courses add by ${interaction.user.tag}`
         );
       } catch (error) {
-        logger.error('Error showing modal:', error);
-        logger.error(`Error message: ${error.message}`);
-        logger.error(`Error stack: ${error.stack}`);
-        // If modal fails, try to reply with error
+        // If modal fails, it's probably too late - interaction expired
+        logger.error('Failed to show modal:', error.message);
+        // Try to reply if still possible
         if (!interaction.replied && !interaction.deferred) {
           try {
             await interaction.reply({
               content:
-                '❌ Failed to show course creation form. Please contact a Moderator!',
+                '❌ Failed to show form. The interaction may have timed out. Please try again.',
               ephemeral: true,
             });
           } catch (replyError) {
-            logger.error('Failed to send error reply:', replyError);
+            // Interaction is definitely expired
+            logger.error('Interaction expired, cannot reply');
           }
         }
       }
-      return;
+      return; // Exit immediately after showing modal
     }
 
     // Defer reply for commands that need database queries
