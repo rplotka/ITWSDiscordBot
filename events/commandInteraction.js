@@ -13,6 +13,42 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
+    // CRITICAL: /admin courses add must show modal IMMEDIATELY (within 3 seconds)
+    // Do this BEFORE any logging or other processing to save time
+    if (interaction.commandName === 'admin') {
+      try {
+        const subcommandGroup = interaction.options.getSubcommandGroup();
+        const subcommand = interaction.options.getSubcommand();
+        if (subcommandGroup === 'courses' && subcommand === 'add') {
+          // Ultra-fast permission check - no logging until after modal
+          if (
+            interaction.member?.permissions?.has(
+              PermissionFlagsBits.Administrator
+            ) ||
+            interaction.member?.permissions?.has(
+              PermissionFlagsBits.ManageGuild
+            )
+          ) {
+            // Show modal IMMEDIATELY - no await, fire and return
+            interaction
+              .showModal(addCourseModalFactory())
+              .then(() => {
+                logger.info(
+                  `✅ Modal shown for /admin courses add by ${interaction.user.tag}`
+                );
+              })
+              .catch((error) => {
+                logger.error('Error showing modal:', error);
+              });
+            return; // Exit immediately - don't wait for modal to complete
+          }
+        }
+      } catch (error) {
+        // If anything fails, fall through to normal handling
+        logger.error('Error in modal check:', error);
+      }
+    }
+
     logger.info(
       `Received interaction: ${interaction.commandName} from ${interaction.user.tag}`
     );
@@ -28,60 +64,6 @@ module.exports = {
         command.isModeratorOnly || false
       }`
     );
-
-    // Special case: /admin courses add needs to show modal IMMEDIATELY
-    // Modals must be shown within 3 seconds, so we check and show before permission checks
-    if (interaction.commandName === 'admin') {
-      try {
-        const subcommandGroup = interaction.options.getSubcommandGroup();
-        const subcommand = interaction.options.getSubcommand();
-        logger.info(
-          `Admin command - subcommandGroup: ${subcommandGroup}, subcommand: ${subcommand}`
-        );
-
-        if (subcommandGroup === 'courses' && subcommand === 'add') {
-          // Quick permission check first
-          if (interaction.member?.permissions) {
-            const hasAdmin = interaction.member.permissions.has(
-              PermissionFlagsBits.Administrator
-            );
-            const hasManageGuild = interaction.member.permissions.has(
-              PermissionFlagsBits.ManageGuild
-            );
-            logger.info(
-              `Permission check for modal: ADMIN=${hasAdmin}, MANAGE_GUILD=${hasManageGuild}`
-            );
-            if (hasAdmin || hasManageGuild) {
-              // Show modal immediately - must happen within 3 seconds
-              try {
-                await interaction.showModal(addCourseModalFactory());
-                logger.info(
-                  `✅ Modal shown immediately for /admin courses add by ${interaction.user.tag}`
-                );
-                return; // Exit early - don't execute command
-              } catch (error) {
-                logger.error('Error showing modal immediately:', error);
-                logger.error(`Error message: ${error.message}`);
-                logger.error(`Error stack: ${error.stack}`);
-                // Fall through to normal error handling
-              }
-            } else {
-              logger.warn(
-                `User ${interaction.user.tag} lacks permissions for /admin courses add`
-              );
-            }
-          } else {
-            logger.warn(
-              `No permissions object for user ${interaction.user.tag}`
-            );
-          }
-          // If we get here, permission check failed - fall through to normal handling
-        }
-      } catch (error) {
-        logger.error('Error checking subcommand for modal:', error);
-        // Fall through to normal command execution
-      }
-    }
 
     // Check permissions - do this quickly to avoid interaction timeout
     if (command.isModeratorOnly) {
