@@ -1,4 +1,4 @@
-const { ChannelType } = require('discord.js');
+const { ChannelType, PermissionFlagsBits } = require('discord.js');
 const { coursePermissions, courseChannelTopics } = require('../core/constants');
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
@@ -88,6 +88,23 @@ module.exports = {
       interaction.customId !== 'add-course-modal'
     )
       return;
+
+    // Check permissions here since we skipped it in command handler
+    if (interaction.member?.permissions) {
+      const hasAdmin = interaction.member.permissions.has(
+        PermissionFlagsBits.Administrator
+      );
+      const hasManageGuild = interaction.member.permissions.has(
+        PermissionFlagsBits.ManageGuild
+      );
+      if (!hasAdmin && !hasManageGuild) {
+        await interaction.reply({
+          content: '❌ Only moderators can create courses!',
+          ephemeral: true,
+        });
+        return;
+      }
+    }
 
     await interaction.deferReply({ ephemeral: true });
 

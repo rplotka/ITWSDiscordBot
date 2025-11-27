@@ -1,6 +1,7 @@
 // JSDoc types: CommandInteraction
 const { PermissionFlagsBits } = require('discord.js');
 const logger = require('../core/logging');
+const { addCourseModalFactory } = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -12,15 +13,36 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
-    logger.info(
-      `Received interaction: ${interaction.commandName} from ${interaction.user.tag}`
-    );
     const command = interaction.client.commands.get(interaction.commandName);
 
     if (!command) {
       logger.warn(`Command not found: ${interaction.commandName}`);
       return;
     }
+
+    // CRITICAL: For /admin courses add, show modal IMMEDIATELY before any checks
+    // This must happen within 3 seconds or Discord times out
+    if (
+      interaction.commandName === 'admin' &&
+      interaction.options.getSubcommandGroup() === 'courses' &&
+      interaction.options.getSubcommand() === 'add'
+    ) {
+      // Show modal first, check permissions later in modal submission
+      try {
+        await interaction.showModal(addCourseModalFactory());
+        logger.info(
+          `Modal shown for /admin courses add by ${interaction.user.tag}`
+        );
+        return; // Exit immediately - don't do permission checks
+      } catch (error) {
+        logger.error('Failed to show modal:', error.message);
+        // If modal fails, fall through to normal handling
+      }
+    }
+
+    logger.info(
+      `Received interaction: ${interaction.commandName} from ${interaction.user.tag}`
+    );
 
     logger.info(
       `Command found: ${interaction.commandName}, isModeratorOnly: ${
