@@ -4,6 +4,7 @@ const {
   courseSelectorActionRowFactory,
 } = require('../core/utils');
 const { Course, CourseTeam } = require('../core/db');
+const logger = require('../core/logging');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -55,33 +56,43 @@ module.exports = {
 
     if (subcommandGroup === 'courses' && subcommand === 'add') {
       await interaction.showModal(addCourseModalFactory());
-    } else if (subcommandGroup === 'courses' && subcommand === 'remove') {
-      // Generate list of courses
-      const courses = await Course.findAll({
-        include: [{ model: CourseTeam, as: 'CourseTeams' }],
-      });
-      const row = courseSelectorActionRowFactory('remove', courses);
+      return;
+    }
 
-      // Discord gets mad if we send a select menu with no options so we check for that
-      if (courses.length === 0) {
-        await interaction.reply({
-          content: 'ℹ️ There are no courses to remove.',
-          ephemeral: true,
+    // Defer reply for commands that need database queries
+    if (subcommandGroup === 'courses' && subcommand === 'remove') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        // Generate list of courses
+        const courses = await Course.findAll({
+          include: [{ model: CourseTeam, as: 'CourseTeams' }],
         });
-        return;
-      }
+        const row = courseSelectorActionRowFactory('remove', courses);
 
-      // Send a message with a select menu of courses
-      // When selected, a new interaction will be fired with the custom ID specified
-      // Another event handler can pick this up and complete the joining or leaving of the course
-      await interaction.reply({
-        content: `❔ Choose a course to **remove**. Note that this will lose message history.`,
-        components: [row],
-        ephemeral: true,
-      });
+        // Discord gets mad if we send a select menu with no options so we check for that
+        if (courses.length === 0) {
+          await interaction.editReply({
+            content: 'ℹ️ There are no courses to remove.',
+          });
+          return;
+        }
+
+        // Send a message with a select menu of courses
+        // When selected, a new interaction will be fired with the custom ID specified
+        // Another event handler can pick this up and complete the joining or leaving of the course
+        await interaction.editReply({
+          content: `❔ Choose a course to **remove**. Note that this will lose message history.`,
+          components: [row],
+        });
+      } catch (error) {
+        logger.error('Error in /admin courses remove command:', error);
+        await interaction.editReply({
+          content: '❌ Something went wrong... Please contact a Moderator!',
+        });
+      }
     } else {
-      await interaction.reply({
-        ephemeral: true,
+      await interaction.deferReply({ ephemeral: true });
+      await interaction.editReply({
         content: 'Coming soon!',
       });
     }
