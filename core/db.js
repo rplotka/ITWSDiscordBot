@@ -48,12 +48,13 @@ const sequelizeConfig = {
   protocol: 'postgres',
   pool: {
     max: 5,
-    min: 0,
-    acquire: 30000,
+    min: 1, // Keep at least 1 connection alive
+    acquire: 60000, // Wait up to 60s for a connection
     idle: 10000,
+    evict: 1000, // Check for stale connections every second
   },
-  query: {
-    timeout: 10000, // 10 second timeout for queries
+  retry: {
+    max: 3, // Retry failed queries up to 3 times
   },
 };
 
