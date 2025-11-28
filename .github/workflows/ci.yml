@@ -33,7 +33,19 @@ jobs:
       - name: Run tests
         run: npm test
         continue-on-error: false
-      
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+        continue-on-error: true
+
       - name: Security audit
         run: npm run security:audit
         continue-on-error: true
