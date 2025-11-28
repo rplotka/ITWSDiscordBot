@@ -16,20 +16,18 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
-    // CRITICAL: For /admin courses add, show modal IMMEDIATELY - FIRST THING
+    // CRITICAL: For /course add, show modal IMMEDIATELY - FIRST THING
     // Check this BEFORE any other processing to save precious milliseconds
     // This must happen within 3 seconds or Discord times out
-    if (interaction.commandName === 'admin') {
-      // Quick inline check - no try/catch overhead
-      const subGroup = interaction.options.getSubcommandGroup();
+    if (interaction.commandName === 'course') {
       const subCmd = interaction.options.getSubcommand();
-      if (subGroup === 'courses' && subCmd === 'add') {
+      if (subCmd === 'add') {
         // Show pre-created modal IMMEDIATELY - fire and return
         interaction
           .showModal(addCourseModal)
           .then(() => {
             logger.info(
-              `Modal shown for /admin courses add by ${interaction.user.tag}`
+              `Modal shown for /course add by ${interaction.user.tag}`
             );
           })
           .catch((error) => {
@@ -43,7 +41,7 @@ module.exports = {
     // This must happen before ANY other processing, even logging
     // We MUST await this to ensure Discord gets the acknowledgment
     const { commandName } = interaction;
-    const needsDatabase = ['join', 'leave', 'admin'].includes(commandName);
+    const needsDatabase = ['join', 'leave', 'course'].includes(commandName);
     if (needsDatabase && !interaction.replied && !interaction.deferred) {
       try {
         // Defer immediately - don't timeout, let it take as long as needed

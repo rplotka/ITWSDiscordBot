@@ -8,66 +8,48 @@ const logger = require('../core/logging');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('admin')
-    .setDescription('Test something')
-    .addSubcommandGroup((group) =>
-      group
-        .setName('courses')
-        .setDescription('Manage courses')
-        .addSubcommand((subcommand) =>
-          subcommand
-            .setName('add')
-            .setDescription('Add a new course and generate roles and channels')
-        )
-        .addSubcommand((subcommand) =>
-          subcommand
-            .setName('add-teams')
-            .setDescription(
-              'Add new teams for a course and generate roles and channels'
-            )
-        )
-        .addSubcommand((subcommand) =>
-          subcommand
-            .setName('remove')
-            .setDescription('Add a new course and generate roles and channels')
-        )
-        .addSubcommand((subcommand) =>
-          subcommand
-            .setName('remove-teams')
-            .setDescription(
-              'Remove teams from a course and remove their roles and channels'
-            )
-        )
-        .addSubcommand((subcommand) =>
-          subcommand
-            .setName('clear')
-            .setDescription(
-              'Reset a course by removing students and clearing channels'
-            )
-        )
+    .setName('course')
+    .setDescription('Manage courses (Moderator only)')
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('add')
+        .setDescription('Add a new course with roles and channels')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('remove')
+        .setDescription('Remove a course and all its roles/channels')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('add-teams')
+        .setDescription('Add teams to an existing course')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('remove-teams')
+        .setDescription('Remove teams from a course')
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('clear')
+        .setDescription('Reset course - remove students and clear channels')
     ),
   isModeratorOnly: true,
   /**
-   * @param {CommandInteraction} interaction
+   * @param {import('discord.js').CommandInteraction} interaction
    */
   async execute(interaction) {
-    const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
 
-    // CRITICAL: /admin courses add - Show modal IMMEDIATELY, no checks, no logging
+    // CRITICAL: /course add - Show modal IMMEDIATELY, no checks, no logging
     // This must be the FIRST thing we do - Discord gives us 3 seconds
-    if (subcommandGroup === 'courses' && subcommand === 'add') {
-      // Show modal immediately - don't check anything first, just show it
+    if (subcommand === 'add') {
       try {
         await interaction.showModal(addCourseModalFactory());
-        // Only log after modal is shown
-        logger.info(
-          `Modal shown for /admin courses add by ${interaction.user.tag}`
-        );
+        logger.info(`Modal shown for /course add by ${interaction.user.tag}`);
       } catch (error) {
-        // If modal fails, it's probably too late - interaction expired
         logger.error('Failed to show modal:', error.message);
-        // Try to reply if still possible
         if (!interaction.replied && !interaction.deferred) {
           try {
             await interaction.reply({
@@ -76,22 +58,19 @@ module.exports = {
               ephemeral: true,
             });
           } catch (replyError) {
-            // Interaction is definitely expired
             logger.error('Interaction expired, cannot reply');
           }
         }
       }
-      return; // Exit immediately after showing modal
+      return;
     }
 
-    // Defer reply for commands that need database queries
-    if (subcommandGroup === 'courses' && subcommand === 'remove') {
-      // Defer reply if not already deferred (should be deferred by command handler)
+    // /course remove - Show course selector
+    if (subcommand === 'remove') {
       if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ ephemeral: true });
       }
 
-      // Check if database is available
       if (!Course || !CourseTeam) {
         logger.error('Database models not available');
         await interaction.editReply({
@@ -101,7 +80,6 @@ module.exports = {
       }
 
       try {
-        // Generate list of courses with timeout wrapper
         const withTimeout = (queryPromise, timeoutMs = 8000) => {
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
@@ -118,7 +96,6 @@ module.exports = {
         );
         const row = courseSelectorActionRowFactory('remove', courses);
 
-        // Discord gets mad if we send a select menu with no options so we check for that
         if (courses.length === 0) {
           await interaction.editReply({
             content: 'ℹ️ There are no courses to remove.',
@@ -126,15 +103,13 @@ module.exports = {
           return;
         }
 
-        // Send a message with a select menu of courses
-        // When selected, a new interaction will be fired with the custom ID specified
-        // Another event handler can pick this up and complete the joining or leaving of the course
         await interaction.editReply({
-          content: `❔ Choose a course to **remove**. Note that this will lose message history.`,
+          content:
+            '❔ Choose a course to **remove**. Note that this will lose message history.',
           components: [row],
         });
       } catch (error) {
-        logger.error('Error in /admin courses remove command:', error);
+        logger.error('Error in /course remove command:', error);
         logger.error(`Error message: ${error.message}`);
         logger.error(`Error stack: ${error.stack}`);
 
@@ -151,11 +126,48 @@ module.exports = {
           content: errorMessage,
         });
       }
-    } else {
-      await interaction.deferReply({ ephemeral: true });
-      await interaction.editReply({
-        content: 'Coming soon!',
-      });
+      return;
     }
+
+    // /course add-teams - Coming soon
+    if (subcommand === 'add-teams') {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
+      }
+      await interaction.editReply({
+        content: '🚧 `/course add-teams` is coming soon!',
+      });
+      return;
+    }
+
+    // /course remove-teams - Coming soon
+    if (subcommand === 'remove-teams') {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
+      }
+      await interaction.editReply({
+        content: '🚧 `/course remove-teams` is coming soon!',
+      });
+      return;
+    }
+
+    // /course clear - Coming soon
+    if (subcommand === 'clear') {
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
+      }
+      await interaction.editReply({
+        content: '🚧 `/course clear` is coming soon!',
+      });
+      return;
+    }
+
+    // Fallback for unknown subcommands
+    if (!interaction.deferred && !interaction.replied) {
+      await interaction.deferReply({ ephemeral: true });
+    }
+    await interaction.editReply({
+      content: '❌ Unknown subcommand.',
+    });
   },
 };
