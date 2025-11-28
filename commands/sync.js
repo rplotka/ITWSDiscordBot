@@ -10,7 +10,7 @@ const logger = require('../core/logging');
 
 /**
  * Find potential courses in Discord that could be imported to DB
- * A course is identified by having an "X Instructor" role pattern
+ * Looks at Faculty members' roles to identify course roles
  */
 function findImportableCourses(guild, existingCourses) {
   const existingRoleIds = new Set();
@@ -20,21 +20,92 @@ function findImportableCourses(guild, existingCourses) {
       existingRoleIds.add(c.discordInstructorRoleId);
   });
 
-  const importable = [];
+  // Roles to exclude from course detection
+  const excludedRoleNames = new Set([
+    '@everyone',
+    'everyone',
+    'Faculty',
+    'Instructor',
+    'Instructors',
+    'Staff',
+    'Admin',
+    'Administrator',
+    'Moderator',
+    'Bot',
+    'Bots',
+    'Student',
+    'Students',
+    'Alumni',
+    'Prospective Students',
+    'Accepted Students',
+    'Server Booster',
+  ]);
+
+  // Find the Faculty role
+  const facultyRole = guild.roles.cache.find((r) => r.name === 'Faculty');
+
+  const importable = new Map(); // Use map to dedupe by role ID
+
+  if (facultyRole) {
+    // Look at what roles Faculty members have
+    facultyRole.members.forEach((member) => {
+      member.roles.cache.forEach((role) => {
+        // Skip if already tracked, excluded, or is an instructor role
+        if (existingRoleIds.has(role.id)) return;
+        if (excludedRoleNames.has(role.name)) return;
+        if (role.name.endsWith(' Instructor')) return;
+        if (role.name === facultyRole.name) return;
+        if (role.managed) return; // Skip bot roles
+
+        // This is likely a course role
+        if (!importable.has(role.id)) {
+          // Look for matching instructor role
+          const instructorRole = guild.roles.cache.find(
+            (r) => r.name === `${role.name} Instructor`
+          );
+
+          // Look for matching category
+          const category = guild.channels.cache.find(
+            (c) =>
+              c.type === ChannelType.GuildCategory &&
+              (c.name === role.name ||
+                c.name.toLowerCase() === role.name.toLowerCase())
+          );
+
+          importable.set(role.id, {
+            name: role.name,
+            courseRole: role,
+            instructorRole: instructorRole || null,
+            category: category || null,
+            memberCount: role.members.size,
+            instructorCount: instructorRole ? instructorRole.members.size : 0,
+          });
+        }
+      });
+    });
+  }
+
+  // Also find any "X Instructor" roles that weren't caught above
   const instructorRoles = guild.roles.cache.filter(
-    (r) => r.name.endsWith(' Instructor') && !existingRoleIds.has(r.id)
+    (r) =>
+      r.name.endsWith(' Instructor') &&
+      !existingRoleIds.has(r.id) &&
+      !excludedRoleNames.has(r.name.replace(/ Instructor$/, ''))
   );
 
   instructorRoles.forEach((instructorRole) => {
-    // Extract course name from "X Instructor" -> "X"
     const courseName = instructorRole.name.replace(/ Instructor$/, '');
 
-    // Look for matching course role (same name without "Instructor")
+    // Skip if we already have this course from Faculty detection
+    const existingEntry = Array.from(importable.values()).find(
+      (item) => item.name === courseName
+    );
+    if (existingEntry) return;
+
     const courseRole = guild.roles.cache.find(
       (r) => r.name === courseName && !existingRoleIds.has(r.id)
     );
 
-    // Look for matching category
     const category = guild.channels.cache.find(
       (c) =>
         c.type === ChannelType.GuildCategory &&
@@ -42,17 +113,17 @@ function findImportableCourses(guild, existingCourses) {
           c.name.toLowerCase() === courseName.toLowerCase())
     );
 
-    importable.push({
+    importable.set(instructorRole.id, {
       name: courseName,
-      instructorRole,
       courseRole: courseRole || null,
+      instructorRole,
       category: category || null,
       memberCount: courseRole ? courseRole.members.size : 0,
       instructorCount: instructorRole.members.size,
     });
   });
 
-  return importable;
+  return Array.from(importable.values());
 }
 
 /**

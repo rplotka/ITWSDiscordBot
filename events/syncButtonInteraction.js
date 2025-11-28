@@ -12,6 +12,7 @@ const pendingDeletions = new Map();
 
 /**
  * Find potential courses in Discord that could be imported to DB
+ * Looks at Faculty members' roles to identify course roles
  */
 function findImportableCourses(guild, existingCourses) {
   const existingRoleIds = new Set();
@@ -21,13 +22,79 @@ function findImportableCourses(guild, existingCourses) {
       existingRoleIds.add(c.discordInstructorRoleId);
   });
 
-  const importable = [];
+  // Roles to exclude from course detection
+  const excludedRoleNames = new Set([
+    '@everyone',
+    'everyone',
+    'Faculty',
+    'Instructor',
+    'Instructors',
+    'Staff',
+    'Admin',
+    'Administrator',
+    'Moderator',
+    'Bot',
+    'Bots',
+    'Student',
+    'Students',
+    'Alumni',
+    'Prospective Students',
+    'Accepted Students',
+    'Server Booster',
+  ]);
+
+  // Find the Faculty role
+  const facultyRole = guild.roles.cache.find((r) => r.name === 'Faculty');
+
+  const importable = new Map();
+
+  if (facultyRole) {
+    facultyRole.members.forEach((member) => {
+      member.roles.cache.forEach((role) => {
+        if (existingRoleIds.has(role.id)) return;
+        if (excludedRoleNames.has(role.name)) return;
+        if (role.name.endsWith(' Instructor')) return;
+        if (role.name === facultyRole.name) return;
+        if (role.managed) return;
+
+        if (!importable.has(role.id)) {
+          const instructorRole = guild.roles.cache.find(
+            (r) => r.name === `${role.name} Instructor`
+          );
+
+          const category = guild.channels.cache.find(
+            (c) =>
+              c.type === ChannelType.GuildCategory &&
+              (c.name === role.name ||
+                c.name.toLowerCase() === role.name.toLowerCase())
+          );
+
+          importable.set(role.id, {
+            name: role.name,
+            courseRole: role,
+            instructorRole: instructorRole || null,
+            category: category || null,
+          });
+        }
+      });
+    });
+  }
+
+  // Also find any "X Instructor" roles
   const instructorRoles = guild.roles.cache.filter(
-    (r) => r.name.endsWith(' Instructor') && !existingRoleIds.has(r.id)
+    (r) =>
+      r.name.endsWith(' Instructor') &&
+      !existingRoleIds.has(r.id) &&
+      !excludedRoleNames.has(r.name.replace(/ Instructor$/, ''))
   );
 
   instructorRoles.forEach((instructorRole) => {
     const courseName = instructorRole.name.replace(/ Instructor$/, '');
+
+    const existingEntry = Array.from(importable.values()).find(
+      (item) => item.name === courseName
+    );
+    if (existingEntry) return;
 
     const courseRole = guild.roles.cache.find(
       (r) => r.name === courseName && !existingRoleIds.has(r.id)
@@ -40,15 +107,15 @@ function findImportableCourses(guild, existingCourses) {
           c.name.toLowerCase() === courseName.toLowerCase())
     );
 
-    importable.push({
+    importable.set(instructorRole.id, {
       name: courseName,
-      instructorRole,
       courseRole: courseRole || null,
+      instructorRole,
       category: category || null,
     });
   });
 
-  return importable;
+  return Array.from(importable.values());
 }
 
 /**

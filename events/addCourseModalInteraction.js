@@ -132,22 +132,40 @@ module.exports = {
       const val = (fieldName) =>
         interaction.fields.getTextInputValue(fieldName);
 
+      const courseNumber = val('add-course-number').trim().toUpperCase();
       const title = val('add-course-title');
-      const shortTitle = val('add-course-short');
       const instructors = val('add-course-instructor')
         .split(',')
         .map((value) => value.trim())
         .filter((value) => value);
       const teamsCount = parseInt(val('add-course-teams'), 10) || 0;
 
-      // const courseIsPublicField = interaction.fields.getField(
-      //   'add-course-modal-is-public'
-      // );
-      const isPublic = true; // = courseIsPublicField.value === 'yes';
+      // Validate course number format (should be like ITWS-4500, CSCI-1100)
+      const courseNumberPattern = /^[A-Z]{2,6}-?\d{3,5}$/;
+      if (!courseNumberPattern.test(courseNumber)) {
+        await interaction.editReply({
+          content:
+            '❌ Invalid course number format. Please use format like ITWS-4500 or CSCI1100.',
+        });
+        return;
+      }
+
+      // Check if course number already exists
+      const existingCourse = await Course.findOne({
+        where: { shortTitle: courseNumber },
+      });
+      if (existingCourse) {
+        await interaction.editReply({
+          content: `❌ Course number **${courseNumber}** already exists for "${existingCourse.title}". Please use a unique course number.`,
+        });
+        return;
+      }
+
+      const isPublic = true;
 
       const newCourse = Course.build({
         title,
-        shortTitle,
+        shortTitle: courseNumber, // Use course number as shortTitle for lookups
         isPublic,
         instructors,
       });
@@ -229,7 +247,7 @@ module.exports = {
           });
 
           const teamNames = generateSequentialTeamNames(
-            shortTitle,
+            courseNumber,
             teamsCount,
             1
           );

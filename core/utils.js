@@ -125,25 +125,26 @@ const addCourseModalFactory = (prefill = {}) => {
     .setCustomId(customIds.course.addModal)
     .setTitle('Add Course');
 
+  const courseNumberInput = new TextInputBuilder()
+    .setCustomId('add-course-number')
+    .setLabel('Course number (e.g., ITWS-4500)')
+    .setPlaceholder('DEPT-NUMBER format, must be unique')
+    .setRequired(true)
+    .setStyle(TextInputStyle.Short);
+
+  if (prefill.courseNumber) {
+    courseNumberInput.setValue(prefill.courseNumber);
+  }
+
   const titleInput = new TextInputBuilder()
     .setCustomId('add-course-title')
-    .setLabel("What's the FULL name of the course?")
+    .setLabel('Display name (full course title)')
+    .setPlaceholder('e.g., Web Science Systems Development')
     .setRequired(true)
     .setStyle(TextInputStyle.Short);
 
   if (prefill.name) {
     titleInput.setValue(prefill.name);
-  }
-
-  const shortTitleInput = new TextInputBuilder()
-    .setCustomId('add-course-short')
-    .setLabel("What's the SHORT name of the course?")
-    .setPlaceholder('e.g. intro, mitr, capstone (used in channel names)')
-    .setRequired(true)
-    .setStyle(TextInputStyle.Short);
-
-  if (prefill.short) {
-    shortTitleInput.setValue(prefill.short);
   }
 
   const instructorsInput = new TextInputBuilder()
@@ -166,8 +167,8 @@ const addCourseModalFactory = (prefill = {}) => {
     .setMaxLength(2)
     .setStyle(TextInputStyle.Short);
 
-  const row1 = new ActionRowBuilder().addComponents(titleInput);
-  const row2 = new ActionRowBuilder().addComponents(shortTitleInput);
+  const row1 = new ActionRowBuilder().addComponents(courseNumberInput);
+  const row2 = new ActionRowBuilder().addComponents(titleInput);
   const row3 = new ActionRowBuilder().addComponents(instructorsInput);
   const row4 = new ActionRowBuilder().addComponents(teamsInput);
 
