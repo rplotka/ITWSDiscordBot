@@ -11,24 +11,35 @@ module.exports = {
    * @param {CommandInteraction} interaction
    */
   async execute(interaction) {
-    if (
-      !interaction.isStringSelectMenu() ||
-      interaction.customId !== 'remove-course' ||
-      !interaction.values.length
-    )
-      return;
-
-    // Wrap everything in try-catch to ensure we always respond
-    try {
-      const courseId = interaction.values[0];
-
+    // Log ALL interactions to debug
+    if (interaction.isStringSelectMenu()) {
       logger.info(
-        `${interaction.user} selected course ID ${courseId} to REMOVE`
+        `StringSelectMenu interaction received: customId=${interaction.customId}`
       );
+    }
 
-      // CRITICAL: Defer IMMEDIATELY to prevent "This interaction failed" error
+    // Early exit if not our interaction
+    if (!interaction.isStringSelectMenu()) return;
+    if (interaction.customId !== 'remove-course') return;
+    if (!interaction.values.length) return;
+
+    logger.info('remove-course handler matched - attempting to defer');
+
+    // CRITICAL: Defer IMMEDIATELY - must be first async operation
+    // Discord gives us only 3 seconds to acknowledge
+    try {
       await interaction.deferUpdate();
+      logger.info('remove-course defer successful');
+    } catch (deferError) {
+      logger.error('Failed to defer remove-course interaction:', deferError);
+      return;
+    }
 
+    const courseId = interaction.values[0];
+    logger.info(`${interaction.user} selected course ID ${courseId} to REMOVE`);
+
+    // Wrap remaining logic in try-catch
+    try {
       // Check if database is available
       if (!Course) {
         logger.error('Course model not available - database not connected');
