@@ -16,48 +16,55 @@ jobs:
     name: Deploy to Google Cloud Run
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Run quality checks
         run: |
           npm ci
           npm run lint
           npm run format:check
           npm test
-      
+
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-      
+
       - name: Set project
         run: gcloud config set project $PROJECT_ID
-      
+
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker
-      
+
       - name: Build and push Docker image
         run: |
           IMAGE_TAG="gcr.io/$PROJECT_ID/$SERVICE_NAME:${{ github.sha }}"
           # Build and push Docker image synchronously
           # This waits for the build to complete and streams logs
           gcloud builds submit --tag $IMAGE_TAG --project=$PROJECT_ID --default-buckets-behavior=regional-user-owned-bucket
-      
+
       - name: Deploy to Cloud Run
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           IMAGE_TAG="gcr.io/$PROJECT_ID/$SERVICE_NAME:${{ github.sha }}"
+          # Fetch secrets from Doppler and format as Cloud Run env vars
+          ENV_VARS=$(doppler secrets download --no-file --format env-no-quotes | grep -v '^#' | tr '\n' ',' | sed 's/,$//')
           gcloud run deploy $SERVICE_NAME \
             --image $IMAGE_TAG \
             --region $REGION \
@@ -70,8 +77,8 @@ jobs:
             --max-instances 1 \
             --min-instances 1 \
             --add-cloudsql-instances=itws-discord-bot:us-central1:itws-discord-db \
-            --set-env-vars="DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }},DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }},DISCORD_SERVER_ID=${{ secrets.DISCORD_SERVER_ID }},DATABASE_URL=${{ secrets.DATABASE_URL }},DISCORD_PROSPECTIVE_STUDENTS_ROLE_ID=${{ secrets.DISCORD_PROSPECTIVE_STUDENTS_ROLE_ID }},DISCORD_ACCEPTED_STUDENTS_ROLE_ID=${{ secrets.DISCORD_ACCEPTED_STUDENTS_ROLE_ID }}"
-      
+            --set-env-vars="$ENV_VARS"
+
       - name: Verify deployment
         run: |
           gcloud run services describe $SERVICE_NAME \

@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "start:doppler": "doppler run -- node index.js",
     "dev": "nodemon index.js | pino-pretty",
+    "dev:doppler": "doppler run -- nodemon index.js | pino-pretty",
     "deploy-commands": "node deploy-commands.js",
+    "deploy-commands:doppler": "doppler run -- node deploy-commands.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
