@@ -1,9 +1,55 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+} = require('discord.js');
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
 
 // Store pending deletions temporarily (role IDs to delete after confirmation)
 const pendingDeletions = new Map();
+
+/**
+ * Find potential courses in Discord that could be imported to DB
+ */
+function findImportableCourses(guild, existingCourses) {
+  const existingRoleIds = new Set();
+  existingCourses.forEach((c) => {
+    if (c.discordRoleId) existingRoleIds.add(c.discordRoleId);
+    if (c.discordInstructorRoleId)
+      existingRoleIds.add(c.discordInstructorRoleId);
+  });
+
+  const importable = [];
+  const instructorRoles = guild.roles.cache.filter(
+    (r) => r.name.endsWith(' Instructor') && !existingRoleIds.has(r.id)
+  );
+
+  instructorRoles.forEach((instructorRole) => {
+    const courseName = instructorRole.name.replace(/ Instructor$/, '');
+
+    const courseRole = guild.roles.cache.find(
+      (r) => r.name === courseName && !existingRoleIds.has(r.id)
+    );
+
+    const category = guild.channels.cache.find(
+      (c) =>
+        c.type === ChannelType.GuildCategory &&
+        (c.name === courseName ||
+          c.name.toLowerCase() === courseName.toLowerCase())
+    );
+
+    importable.push({
+      name: courseName,
+      instructorRole,
+      courseRole: courseRole || null,
+      category: category || null,
+    });
+  });
+
+  return importable;
+}
 
 /**
  * Find orphaned roles that match course/instructor patterns but aren't in DB
@@ -66,6 +112,95 @@ module.exports = {
           content: 'Sync report dismissed.',
           components: [],
         });
+        return;
+      }
+
+      // Confirm import - actually create database entries
+      if (action === 'sync-confirm-import') {
+        await interaction.deferUpdate();
+
+        if (!Course) {
+          await interaction.editReply({
+            content: '❌ Database is not available.',
+            components: [],
+          });
+          return;
+        }
+
+        const existingCourses = await Course.findAll();
+        const importable = findImportableCourses(
+          interaction.guild,
+          existingCourses
+        );
+
+        if (importable.length === 0) {
+          await interaction.editReply({
+            content: '✅ No courses to import.',
+            components: [],
+          });
+          return;
+        }
+
+        let imported = 0;
+        let failed = 0;
+        const importedNames = [];
+        const failedNames = [];
+
+        // Import each course
+        const importResults = await Promise.allSettled(
+          importable.map(async (item) => {
+            const courseData = {
+              title: item.name,
+              shortTitle:
+                item.name.length > 20 ? item.name.substring(0, 20) : item.name,
+              isPublic: true,
+              discordRoleId: item.courseRole?.id || null,
+              discordInstructorRoleId: item.instructorRole.id,
+              discordCategoryId: item.category?.id || null,
+            };
+
+            await Course.create(courseData);
+            logger.info(`Imported course to DB: ${item.name}`);
+            return { success: true, name: item.name };
+          })
+        );
+
+        importResults.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value.success) {
+            imported += 1;
+            importedNames.push(result.value.name);
+          } else {
+            failed += 1;
+            failedNames.push(importable[index].name);
+            if (result.status === 'rejected') {
+              logger.error(
+                `Failed to import course ${importable[index].name}:`,
+                result.reason
+              );
+            }
+          }
+        });
+
+        let response = `**📥 Import Complete**\n\n`;
+        response += `✅ Imported ${imported} course(s) to database\n`;
+        if (importedNames.length > 0 && importedNames.length <= 10) {
+          response += `   ${importedNames.join(', ')}\n`;
+        }
+        if (failed > 0) {
+          response += `❌ Failed to import ${failed} course(s): ${failedNames.join(
+            ', '
+          )}\n`;
+        }
+        response += `\nYou can now use \`/remove course\` to manage these courses.`;
+
+        await interaction.editReply({
+          content: response,
+          components: [],
+        });
+
+        logger.info(
+          `Sync import complete: ${imported} imported, ${failed} failed`
+        );
         return;
       }
 

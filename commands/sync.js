@@ -3,9 +3,146 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelType,
 } = require('discord.js');
 const { Course, CourseTeam } = require('../core/db');
 const logger = require('../core/logging');
+
+/**
+ * Find potential courses in Discord that could be imported to DB
+ * A course is identified by having an "X Instructor" role pattern
+ */
+function findImportableCourses(guild, existingCourses) {
+  const existingRoleIds = new Set();
+  existingCourses.forEach((c) => {
+    if (c.discordRoleId) existingRoleIds.add(c.discordRoleId);
+    if (c.discordInstructorRoleId)
+      existingRoleIds.add(c.discordInstructorRoleId);
+  });
+
+  const importable = [];
+  const instructorRoles = guild.roles.cache.filter(
+    (r) => r.name.endsWith(' Instructor') && !existingRoleIds.has(r.id)
+  );
+
+  instructorRoles.forEach((instructorRole) => {
+    // Extract course name from "X Instructor" -> "X"
+    const courseName = instructorRole.name.replace(/ Instructor$/, '');
+
+    // Look for matching course role (same name without "Instructor")
+    const courseRole = guild.roles.cache.find(
+      (r) => r.name === courseName && !existingRoleIds.has(r.id)
+    );
+
+    // Look for matching category
+    const category = guild.channels.cache.find(
+      (c) =>
+        c.type === ChannelType.GuildCategory &&
+        (c.name === courseName ||
+          c.name.toLowerCase() === courseName.toLowerCase())
+    );
+
+    importable.push({
+      name: courseName,
+      instructorRole,
+      courseRole: courseRole || null,
+      category: category || null,
+      memberCount: courseRole ? courseRole.members.size : 0,
+      instructorCount: instructorRole.members.size,
+    });
+  });
+
+  return importable;
+}
+
+/**
+ * Handle /sync import command - preview and import Discord resources to DB
+ */
+async function handleSyncImport(interaction) {
+  await interaction.deferReply({ ephemeral: true });
+
+  if (!Course) {
+    await interaction.editReply({
+      content: '❌ Database is not available. Please contact a Moderator!',
+    });
+    return;
+  }
+
+  try {
+    await interaction.editReply({
+      content: '⏳ Scanning Discord for importable courses...',
+    });
+
+    const existingCourses = await Course.findAll();
+    const importable = findImportableCourses(
+      interaction.guild,
+      existingCourses
+    );
+
+    if (importable.length === 0) {
+      await interaction.editReply({
+        content:
+          '✅ **No courses to import.**\n\n' +
+          'Courses are identified by having an "X Instructor" role pattern.\n' +
+          `Currently tracking ${existingCourses.length} course(s) in the database.`,
+      });
+      return;
+    }
+
+    // Build preview report
+    let report = `**📥 Found ${importable.length} Course(s) to Import**\n\n`;
+    report +=
+      'The following Discord resources will be linked in the database:\n\n';
+
+    importable.slice(0, 15).forEach((item, index) => {
+      report += `**${index + 1}. ${item.name}**\n`;
+      report += `   • Instructor Role: ${item.instructorRole.name} (${item.instructorCount} members)\n`;
+      if (item.courseRole) {
+        report += `   • Course Role: ${item.courseRole.name} (${item.memberCount} members)\n`;
+      } else {
+        report += `   • Course Role: ⚠️ Not found\n`;
+      }
+      if (item.category) {
+        report += `   • Category: ${item.category.name}\n`;
+      } else {
+        report += `   • Category: ⚠️ Not found\n`;
+      }
+      report += '\n';
+    });
+
+    if (importable.length > 15) {
+      report += `... and ${importable.length - 15} more\n\n`;
+    }
+
+    report +=
+      '⚠️ **This will NOT create any new Discord resources.**\n' +
+      'It only links existing Discord roles/categories to database entries.\n';
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('sync-confirm-import')
+        .setLabel(`Import ${importable.length} Course(s)`)
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('📥'),
+      new ButtonBuilder()
+        .setCustomId('sync-dismiss')
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    await interaction.editReply({
+      content: report,
+      components: [row],
+    });
+
+    logger.info(`Sync import preview: ${importable.length} courses found`);
+  } catch (error) {
+    logger.error('Error in /sync import:', error);
+    await interaction.editReply({
+      content: `❌ Error: ${error.message}`,
+    });
+  }
+}
 
 /**
  * Handle /sync server command - analyze and report discrepancies
@@ -278,7 +415,16 @@ module.exports = {
     .addSubcommand((subcommand) =>
       subcommand
         .setName('server')
-        .setDescription('Check and reconcile Discord with database')
+        .setDescription(
+          'Check and report discrepancies between Discord and database'
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('import')
+        .setDescription(
+          'Import existing Discord courses/roles into the database'
+        )
     ),
   isModeratorOnly: true,
 
@@ -291,6 +437,8 @@ module.exports = {
 
     if (subcommand === 'server') {
       await handleSyncServer(interaction);
+    } else if (subcommand === 'import') {
+      await handleSyncImport(interaction);
     }
   },
 };
