@@ -1,6 +1,10 @@
 // JSDoc types: CommandInteraction
 const { PermissionFlagsBits } = require('discord.js');
 const logger = require('../core/logging');
+const { addCourseModalFactory } = require('../core/utils');
+
+// Pre-create modal at module load to save time during interaction
+const addCourseModal = addCourseModalFactory();
 
 module.exports = {
   name: 'interactionCreate',
@@ -11,6 +15,29 @@ module.exports = {
    */
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
+
+    // CRITICAL: For /admin courses add, show modal IMMEDIATELY - FIRST THING
+    // Check this BEFORE any other processing to save precious milliseconds
+    // This must happen within 3 seconds or Discord times out
+    if (interaction.commandName === 'admin') {
+      // Quick inline check - no try/catch overhead
+      const subGroup = interaction.options.getSubcommandGroup();
+      const subCmd = interaction.options.getSubcommand();
+      if (subGroup === 'courses' && subCmd === 'add') {
+        // Show pre-created modal IMMEDIATELY - fire and return
+        interaction
+          .showModal(addCourseModal)
+          .then(() => {
+            logger.info(
+              `Modal shown for /admin courses add by ${interaction.user.tag}`
+            );
+          })
+          .catch((error) => {
+            logger.error('Failed to show modal:', error.message);
+          });
+        return; // Exit immediately
+      }
+    }
 
     // For commands that need database access, defer IMMEDIATELY to prevent timeout
     // This must happen before ANY other processing, even logging
@@ -60,6 +87,10 @@ module.exports = {
       }
       return;
     }
+
+    logger.info(
+      `Received interaction: ${interaction.commandName} from ${interaction.user.tag}`
+    );
 
     logger.info(
       `Command found: ${interaction.commandName}, isModeratorOnly: ${

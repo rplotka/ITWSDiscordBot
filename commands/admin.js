@@ -54,9 +54,34 @@ module.exports = {
     const subcommandGroup = interaction.options.getSubcommandGroup();
     const subcommand = interaction.options.getSubcommand();
 
+    // CRITICAL: /admin courses add - Show modal IMMEDIATELY, no checks, no logging
+    // This must be the FIRST thing we do - Discord gives us 3 seconds
     if (subcommandGroup === 'courses' && subcommand === 'add') {
-      await interaction.showModal(addCourseModalFactory());
-      return;
+      // Show modal immediately - don't check anything first, just show it
+      try {
+        await interaction.showModal(addCourseModalFactory());
+        // Only log after modal is shown
+        logger.info(
+          `Modal shown for /admin courses add by ${interaction.user.tag}`
+        );
+      } catch (error) {
+        // If modal fails, it's probably too late - interaction expired
+        logger.error('Failed to show modal:', error.message);
+        // Try to reply if still possible
+        if (!interaction.replied && !interaction.deferred) {
+          try {
+            await interaction.reply({
+              content:
+                '❌ Failed to show form. The interaction may have timed out. Please try again.',
+              ephemeral: true,
+            });
+          } catch (replyError) {
+            // Interaction is definitely expired
+            logger.error('Interaction expired, cannot reply');
+          }
+        }
+      }
+      return; // Exit immediately after showing modal
     }
 
     // Defer reply for commands that need database queries

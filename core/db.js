@@ -12,21 +12,22 @@ if (
   );
 }
 
-// Determine if this is a Cloud SQL Unix socket connection
-// Unix socket connections (via /cloudsql/) don't need SSL
+// Detect if this is a Cloud SQL Unix socket connection
+// Unix socket connections use host=/cloudsql/... format
 const isUnixSocket = databaseUrl && databaseUrl.includes('host=/cloudsql/');
-const needsSSL = !isUnixSocket; // Only use SSL for TCP connections
 
-// Parse connection string to add sslmode=disable for Unix sockets
+// For Unix socket connections, ensure sslmode=disable is in the connection string
 let finalDatabaseUrl = databaseUrl;
 if (isUnixSocket && !databaseUrl.includes('sslmode=')) {
-  // Add sslmode=disable to the connection string for Unix socket connections
+  // Add sslmode=disable to the connection string if not already present
   const separator = databaseUrl.includes('?') ? '&' : '?';
   finalDatabaseUrl = `${databaseUrl}${separator}sslmode=disable`;
-  logger.info('Detected Unix socket connection, disabling SSL');
+  logger.info(
+    'Added sslmode=disable to Cloud SQL Unix socket connection string'
+  );
 }
 
-// Build Sequelize config - don't include dialectOptions for Unix sockets
+// Build Sequelize configuration
 const sequelizeConfig = {
   logging: false,
   dialect: 'postgres',
@@ -42,17 +43,24 @@ const sequelizeConfig = {
   },
 };
 
-// Only add SSL dialectOptions for TCP connections
-// For Unix sockets, omit dialectOptions entirely to prevent SSL attempts
-if (needsSSL) {
+// For Unix socket connections (Cloud SQL), explicitly disable SSL
+// For regular connections, enable SSL
+if (!isUnixSocket) {
   sequelizeConfig.dialectOptions = {
     ssl: {
       require: true,
       rejectUnauthorized: false,
     },
   };
+} else {
+  // For Unix sockets, explicitly disable SSL in dialectOptions
+  sequelizeConfig.dialectOptions = {
+    ssl: false,
+  };
+  logger.info(
+    'Detected Cloud SQL Unix socket connection - SSL explicitly disabled'
+  );
 }
-// For Unix sockets, don't set dialectOptions at all - let pg library handle it
 
 const sequelize =
   finalDatabaseUrl &&
