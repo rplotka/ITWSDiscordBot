@@ -7,17 +7,19 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 - [General Commands](#general-commands)
   - [Help](#help)
   - [Test](#test)
-- [Course Management Commands](#course-management-commands)
+- [User Commands](#user-commands)
   - [Join Course](#join-course)
   - [Leave Course](#leave-course)
-  - [Join Course Team](#join-course-team)
-  - [Leave Course Team](#leave-course-team)
-- [Course Management Commands (Moderator)](#course-management-commands-moderator)
+  - [Join Team](#join-team)
+  - [Leave Team](#leave-team)
+- [Moderator Commands](#moderator-commands)
   - [Add Course](#add-course)
+  - [Add Team](#add-team)
   - [Remove Course](#remove-course)
-  - [Add Teams](#add-teams)
-  - [Remove Teams](#remove-teams)
+  - [Remove Team](#remove-team)
   - [Clear Course](#clear-course)
+  - [List Course](#list-course)
+  - [List Channel](#list-channel)
 
 ---
 
@@ -40,20 +42,8 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 **What happens:**
 
 - The bot displays an embed with all available commands
-- Shows which commands are moderator-only
-- Displays a brief description of each command
-
-**Output:**
-
-```
-🤖 Available Commands
-
-`/admin` - Test something (Moderator only)
-`/help` - List all available commands and their descriptions
-`/join` - Join a course or a course team
-`/leave` - Leave a course or a course team
-`/test` - Test something (Moderator only)
-```
+- Commands are grouped by category (Moderator, User, Other)
+- Shows a brief description of each command
 
 ---
 
@@ -74,17 +64,11 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 **What happens:**
 
 1. The bot sends a message to the channel with role selection buttons
-2. Users can click buttons to assign themselves roles:
-   - **Prospective Students** - Button to assign role
-   - **Accepted Students** - Button to assign role
-   - **Current Students** - Link button (external)
-   - **Alumni** - Link button (external)
-
-**Use case:** Use this command to post role selection buttons in a welcome channel or role assignment channel.
+2. Users can click buttons to assign themselves roles
 
 ---
 
-## Course Management Commands
+## User Commands
 
 ### Join Course
 
@@ -94,34 +78,12 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 
 **Who can use:** Everyone (for public courses)
 
-**Example:**
-
-```
-/join course
-```
-
 **What happens:**
 
-1. The bot displays a dropdown menu with available courses you're not already in
+1. A dropdown menu appears with available courses you're not already in
 2. Select a course from the dropdown
 3. The bot assigns you the course role and grants access to course channels
 4. You'll receive a confirmation message
-
-**Note:**
-
-- You can only join courses that are set as "public"
-- You cannot join courses you're already enrolled in
-- If there are no available courses, you'll see: "ℹ️ There are no other courses to join."
-
-**Example interaction:**
-
-```
-You: /join course
-Bot: ❔ Choose a course to join.
-     [Dropdown menu appears with courses]
-You: [Select "Introduction to ITWS" from dropdown]
-Bot: ✅ You've been added to Introduction to ITWS!
-```
 
 ---
 
@@ -129,235 +91,80 @@ Bot: ✅ You've been added to Introduction to ITWS!
 
 **Command:** `/leave course`
 
-**Description:** Leave a course you're currently enrolled in. This removes your access to the course's channels and role.
+**Description:** Leave a course you're currently enrolled in.
 
 **Who can use:** Everyone
 
-**Example:**
-
-```
-/leave course
-```
-
 **What happens:**
 
-1. The bot displays a dropdown menu with courses you're currently in
+1. A dropdown menu appears with courses you're currently in
 2. Select a course from the dropdown
 3. The bot removes your course role and revokes access to course channels
-4. You'll receive a confirmation message
-
-**Note:**
-
-- You can only leave courses you're currently enrolled in
-- If you're not in any courses, you'll see: "ℹ️ You are not in any courses."
-
-**Example interaction:**
-
-```
-You: /leave course
-Bot: ❔ Choose a course to leave.
-     [Dropdown menu appears with your enrolled courses]
-You: [Select "Introduction to ITWS" from dropdown]
-Bot: ✅ You've been removed from Introduction to ITWS.
-```
 
 ---
 
-### Join Course Team
+### Join Team
 
 **Command:** `/join team`
 
-**Description:** Join a team within a course you're enrolled in. Teams have their own private channels for collaboration.
+**Description:** Join a team within a course you're enrolled in.
 
 **Who can use:** Everyone (must be enrolled in the course first)
 
-**Example:**
-
-```
-/join team
-```
-
 **What happens:**
 
-1. The bot displays a dropdown menu with available teams from courses you're enrolled in
+1. A dropdown menu appears with available teams from courses you're enrolled in
 2. Select a team from the dropdown
 3. The bot assigns you the team role and grants access to team channels
-4. You'll receive a confirmation message
-
-**Note:**
-
-- You must be enrolled in the course first before you can join its teams
-- You cannot join teams you're already in
-- If there are no available teams, you'll see a message listing your current courses
-
-**Example interaction:**
-
-```
-You: /join team
-Bot: ❔ Choose a course team to join.
-     [Dropdown menu appears with teams from your courses]
-You: [Select "Team Alpha - Introduction to ITWS" from dropdown]
-Bot: 👥 You now have access to your team channels for Team Alpha in course Introduction to ITWS.
-```
 
 ---
 
-### Leave Course Team
+### Leave Team
 
 **Command:** `/leave team`
 
-**Description:** Leave a course team you're currently in. This removes your access to the team's private channels.
+**Description:** Leave a course team you're currently in.
 
 **Who can use:** Everyone
 
-**Example:**
-
-```
-/leave team
-```
-
 **What happens:**
 
-1. The bot displays a dropdown menu with teams you're currently in
+1. A dropdown menu appears with teams you're currently in
 2. Select a team from the dropdown
 3. The bot removes your team role and revokes access to team channels
-4. You'll receive a confirmation message
-
-**Note:**
-
-- You can only leave teams you're currently in
-- If you're not in any teams, you'll see: "ℹ️ You are not in any course teams."
-
-**Example interaction:**
-
-```
-You: /leave team
-Bot: ❔ Choose a course team to leave.
-     [Dropdown menu appears with your teams]
-You: [Select "Team Alpha - Introduction to ITWS" from dropdown]
-Bot: ✅ You've been removed from Team Alpha.
-```
 
 ---
 
-## Course Management Commands (Moderator)
+## Moderator Commands
 
-> **Note:** All course management commands require Moderator or Administrator permissions.
-
-### Available Course Commands
-
-- `/course add` - Create a new course
-- `/course remove` - Remove a course
-- `/course add-teams` - Add teams to an existing course
-- `/course remove-teams` - Remove teams from a course
-- `/course clear` - Reset a course (remove students, clear channels) _(coming soon)_
-
----
+> **Note:** All moderator commands require Moderator or Administrator permissions.
 
 ### Add Course
 
-**Command:** `/course add`
+**Command:** `/add course`
 
-**Description:** Create a new course with roles and channels. This sets up a complete course structure in Discord.
+**Description:** Create a new course with roles and channels.
 
 **Who can use:** Moderators and Administrators only
-
-**Example:**
-
-```
-/course add
-```
 
 **What happens:**
 
 1. A modal form appears with three fields:
-   - **Full Course Name:** The complete course title (e.g., "Introduction to Information Technology and Web Science")
-   - **Short Course Name:** Abbreviated name for channels (e.g., "intro", "mitr", "capstone")
-   - **Instructors:** Comma-separated list of instructor RCS IDs (e.g., "smithj, jonesm")
+   - **Full Course Name:** The complete course title
+   - **Short Course Name:** Abbreviated name for channels (e.g., "intro")
+   - **Instructors:** Comma-separated list of instructor RCS IDs
 2. Fill out the form and submit
 3. The bot creates:
    - A course category in Discord
    - Course role for students
    - Instructor role for instructors
    - Course channels (announcements, general, discussion)
-4. You'll receive a confirmation message with instructions to assign the instructor role
-
-**Example interaction:**
-
-```
-You: /course add
-Bot: [Modal form appears]
-
-Modal Fields:
-┌─────────────────────────────────────────┐
-│ Add Course                               │
-├─────────────────────────────────────────┤
-│ What's the FULL name of the course?     │
-│ Introduction to ITWS                    │
-│                                         │
-│ What's the SHORT name of the course?    │
-│ intro                                   │
-│                                         │
-│ Who is instructing the course?          │
-│ smithj, jonesm                          │
-└─────────────────────────────────────────┘
-
-You: [Fill form and click Submit]
-Bot: 🎉 Created course, roles, and channels!
-     Now assign the @Instructor role to all instructors.
-     You will see the course category and channels in the sidebar.
-```
-
-**Important Notes:**
-
-- The course will be created as "public" by default (students can join via `/join course`)
-- Make sure to assign the instructor role to all instructors after creation
-- The short name is used in channel names, so keep it concise
 
 ---
 
-### Remove Course
+### Add Team
 
-**Command:** `/course remove`
-
-**Description:** Remove a course and all its associated roles and channels. **Warning:** This will delete message history!
-
-**Who can use:** Moderators and Administrators only
-
-**Example:**
-
-```
-/course remove
-```
-
-**What happens:**
-
-1. The bot displays a dropdown menu with all existing courses
-2. Select a course from the dropdown
-3. The bot removes:
-   - The course from the database
-   - All course roles
-   - All course channels and category
-   - All team roles and channels (if any)
-4. You'll receive a confirmation message
-
-**Warning:** ⚠️ This action is **irreversible** and will delete all message history in the course channels!
-
-**Example interaction:**
-
-```
-You: /course remove
-Bot: ❔ Choose a course to remove. Note that this will lose message history.
-     [Dropdown menu appears with all courses]
-You: [Select "Introduction to ITWS" from dropdown]
-Bot: ✅ Course "Introduction to ITWS" has been removed along with all roles and channels.
-```
-
----
-
-### Add Teams
-
-**Command:** `/course add-teams`
+**Command:** `/add team`
 
 **Description:** Add teams to an existing course. Teams have their own private text and voice channels.
 
@@ -368,39 +175,45 @@ Bot: ✅ Course "Introduction to ITWS" has been removed along with all roles and
 1. A dropdown menu appears with all courses
 2. Select a course to add teams to
 3. A modal form appears asking for team names
-4. Enter team names separated by commas (e.g., "Alpha, Beta, Gamma" or "Team 1, Team 2")
+4. Enter team names separated by commas (e.g., "Alpha, Beta, Gamma")
 5. The bot creates for each team:
    - A team role (e.g., "intro - Alpha")
    - A private text channel
    - A private voice channel
 
-**Example interaction:**
+---
 
-```
-You: /course add-teams
-Bot: ❔ Choose a course to add teams to:
-     [Dropdown menu with courses]
-You: [Select "Introduction to ITWS"]
-Bot: [Modal form appears]
+### Remove Course
 
-Modal Fields:
-- Team names: Alpha, Beta, Gamma
+**Command:** `/remove course`
 
-Bot: ✅ Created 3 team(s) for Introduction to ITWS!
-     • Alpha
-     • Beta
-     • Gamma
-```
+**Description:** Remove a course and all its associated roles and channels.
+
+**Who can use:** Moderators and Administrators only
+
+**Warning:** ⚠️ This action is **irreversible** and will delete all message history!
+
+**What happens:**
+
+1. A dropdown menu appears with all existing courses
+2. Select a course from the dropdown
+3. The bot removes:
+   - The course from the database
+   - All course roles
+   - All course channels and category
+   - All team roles and channels (if any)
 
 ---
 
-### Remove Teams
+### Remove Team
 
-**Command:** `/course remove-teams`
+**Command:** `/remove team`
 
 **Description:** Remove teams from a course and delete their associated roles and channels.
 
 **Who can use:** Moderators and Administrators only
+
+**Warning:** ⚠️ Removing teams permanently deletes all message history in those channels.
 
 **What happens:**
 
@@ -409,23 +222,6 @@ Bot: ✅ Created 3 team(s) for Introduction to ITWS!
 3. A multi-select dropdown appears with all teams in that course
 4. Select one or more teams to remove
 5. The bot deletes the selected teams' roles, channels, and database records
-
-**Example interaction:**
-
-```
-You: /course remove-teams
-Bot: ❔ Choose a course to remove teams from:
-     [Dropdown menu with courses]
-You: [Select "Introduction to ITWS"]
-Bot: ❔ Select teams to remove from Introduction to ITWS:
-     [Multi-select dropdown with teams]
-You: [Select "Alpha" and "Beta"]
-Bot: ✅ Removed 2 team(s) from Introduction to ITWS!
-     • Alpha
-     • Beta
-```
-
-**Warning:** ⚠️ Removing teams permanently deletes all message history in those channels.
 
 ---
 
@@ -437,25 +233,90 @@ Bot: ✅ Removed 2 team(s) from Introduction to ITWS!
 
 **Who can use:** Moderators and Administrators only
 
-**Status:** 🚧 Coming soon
+**What happens:**
+
+1. A dropdown menu appears with all courses
+2. Select a course to clear
+3. A confirmation dialog appears with options:
+   - **Clear Course** - Removes students and clears messages
+   - **Clear Course + Remove Teams** - Also removes all teams
+   - **Cancel** - Abort the operation
+4. The bot:
+   - Removes all students from the course role
+   - Deletes and recreates text channels to clear message history
+   - Optionally removes all teams
+
+---
+
+### List Course
+
+**Command:** `/list course <name|*>`
+
+**Description:** List course(s) and their details.
+
+**Who can use:** Moderators and Administrators only
+
+**Parameters:**
+
+- `name` - Course name to search for, or `*` for all courses
+
+**Examples:**
+
+```
+/list course *           # List all courses
+/list course intro       # List courses matching "intro"
+```
+
+**What happens:**
+
+- Shows course details: title, short title, public status, student count, team count, instructors
+
+---
+
+### List Channel
+
+**Command:** `/list channel <pattern>`
+
+**Description:** List channels matching a wildcard pattern.
+
+**Who can use:** Moderators and Administrators only
+
+**Parameters:**
+
+- `pattern` - Channel name pattern using `*` as wildcard
+
+**Examples:**
+
+```
+/list channel *           # List all channels
+/list channel intro*      # List channels starting with "intro"
+/list channel *voice*     # List channels containing "voice"
+```
+
+**What happens:**
+
+- Shows channels grouped by type: categories, text channels, voice channels
+- Shows parent category for each channel
 
 ---
 
 ## Command Summary
 
-| Command                       | Who Can Use | Purpose                        |
-| ----------------------------- | ----------- | ------------------------------ |
-| `/help`                       | Everyone    | List all commands              |
-| `/test item:Send Role Button` | Moderators  | Post role selection buttons    |
-| `/join course`                | Everyone    | Join a public course           |
-| `/join team`                  | Everyone    | Join a course team             |
-| `/leave course`               | Everyone    | Leave a course                 |
-| `/leave team`                 | Everyone    | Leave a course team            |
-| `/course add`                 | Moderators  | Create a new course            |
-| `/course remove`              | Moderators  | Remove a course                |
-| `/course add-teams`           | Moderators  | Add teams to a course          |
-| `/course remove-teams`        | Moderators  | Remove teams from a course     |
-| `/course clear`               | Moderators  | Reset a course _(coming soon)_ |
+| Command          | Who Can Use | Purpose                          |
+| ---------------- | ----------- | -------------------------------- |
+| `/help`          | Everyone    | List all commands                |
+| `/test`          | Moderators  | Post role selection buttons      |
+| `/join course`   | Everyone    | Join a public course             |
+| `/join team`     | Everyone    | Join a course team               |
+| `/leave course`  | Everyone    | Leave a course                   |
+| `/leave team`    | Everyone    | Leave a course team              |
+| `/add course`    | Moderators  | Create a new course              |
+| `/add team`      | Moderators  | Add teams to a course            |
+| `/remove course` | Moderators  | Remove a course                  |
+| `/remove team`   | Moderators  | Remove teams from a course       |
+| `/course clear`  | Moderators  | Reset a course                   |
+| `/list course`   | Moderators  | List course(s) with details      |
+| `/list channel`  | Moderators  | List channels matching a pattern |
 
 ---
 
@@ -465,16 +326,12 @@ Bot: ✅ Removed 2 team(s) from Introduction to ITWS!
 
 2. **Course Enrollment** - You must join a course before you can join its teams
 
-3. **Role Selection** - Use `/test` command to post role buttons in a dedicated channel for new members
-
-4. **Course Management** - When creating courses, use clear and consistent naming:
+3. **Course Management** - When creating courses, use clear and consistent naming:
 
    - Full name: "Introduction to Information Technology and Web Science"
    - Short name: "intro" (used in channel names)
 
-5. **Instructor IDs** - When adding courses, use RCS IDs (RPI Computing System IDs) for instructors, separated by commas
-
-6. **Private Messages** - Most bot responses are "ephemeral" (only visible to you) to keep channels clean
+4. **Private Messages** - Most bot responses are "ephemeral" (only visible to you) to keep channels clean
 
 ---
 
