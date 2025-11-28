@@ -18,13 +18,27 @@ const isUnixSocket = databaseUrl && databaseUrl.includes('host=/cloudsql/');
 
 // For Unix socket connections, ensure sslmode=disable is in the connection string
 let finalDatabaseUrl = databaseUrl;
-if (isUnixSocket && !databaseUrl.includes('sslmode=')) {
-  // Add sslmode=disable to the connection string if not already present
-  const separator = databaseUrl.includes('?') ? '&' : '?';
-  finalDatabaseUrl = `${databaseUrl}${separator}sslmode=disable`;
-  logger.info(
-    'Added sslmode=disable to Cloud SQL Unix socket connection string'
-  );
+if (isUnixSocket) {
+  // Always ensure sslmode=disable is present for Unix sockets
+  if (!databaseUrl.includes('sslmode=')) {
+    const separator = databaseUrl.includes('?') ? '&' : '?';
+    finalDatabaseUrl = `${databaseUrl}${separator}sslmode=disable`;
+    logger.info(
+      'Added sslmode=disable to Cloud SQL Unix socket connection string'
+    );
+  } else if (
+    databaseUrl.includes('sslmode=require') ||
+    databaseUrl.includes('sslmode=prefer')
+  ) {
+    // Replace any SSL mode with disable
+    finalDatabaseUrl = databaseUrl.replace(/sslmode=[^&]*/, 'sslmode=disable');
+    logger.info(
+      'Replaced SSL mode with sslmode=disable in Cloud SQL Unix socket connection string'
+    );
+  }
+  // Log the final connection string (without password for security)
+  const safeUrl = finalDatabaseUrl.replace(/:[^:@]+@/, ':****@');
+  logger.info(`Final database URL (Unix socket): ${safeUrl}`);
 }
 
 // Build Sequelize configuration
