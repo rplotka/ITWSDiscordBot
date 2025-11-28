@@ -1,39 +1,41 @@
 /**
  * Database connection and model tests
  */
-const test = require('ava');
+import { describe, it, expect } from 'vitest';
 
-test('database models are defined when DATABASE_URL is set', (t) => {
-  // This test verifies that the database models can be imported
-  // without errors, even if DATABASE_URL is not set
-  const { Course, CourseTeam, Group } = require('../core/db');
+describe('database', () => {
+  it('database models are defined when DATABASE_URL is set', async () => {
+    // This test verifies that the database models can be imported
+    // without errors, even if DATABASE_URL is not set
+    const { Course, CourseTeam, Group } = await import('../core/db.js');
 
-  // Models should be defined (may be null if DATABASE_URL not set)
-  t.true(
-    Course === null || typeof Course === 'function',
-    'Course model should be defined or null'
-  );
-  t.true(
-    CourseTeam === null || typeof CourseTeam === 'function',
-    'CourseTeam model should be defined or null'
-  );
-  t.true(
-    Group === null || typeof Group === 'function',
-    'Group model should be defined or null'
-  );
-});
+    // Models should be defined (may be null if DATABASE_URL not set)
+    expect(
+      Course === null || typeof Course === 'function',
+      'Course model should be defined or null'
+    ).toBe(true);
+    expect(
+      CourseTeam === null || typeof CourseTeam === 'function',
+      'CourseTeam model should be defined or null'
+    ).toBe(true);
+    expect(
+      Group === null || typeof Group === 'function',
+      'Group model should be defined or null'
+    ).toBe(true);
+  });
 
-test('database connection is optional', (t) => {
-  // This test verifies that the bot can start without a database
-  // (for testing or when DATABASE_URL is not configured)
-  const db = require('../core/db');
+  it('database connection is optional', async () => {
+    // This test verifies that the bot can start without a database
+    // (for testing or when DATABASE_URL is not configured)
+    const db = await import('../core/db.js');
 
-  // Sequelize should be null, undefined, or an object (Sequelize instance)
-  // When DATABASE_URL is not set, sequelize may be undefined
-  t.true(
-    db.sequelize === null ||
-      db.sequelize === undefined ||
-      (typeof db.sequelize === 'object' && db.sequelize !== null),
-    'Sequelize instance should be null, undefined, or an object'
-  );
+    // Sequelize should be null, undefined, or an object (Sequelize instance)
+    // When DATABASE_URL is not set, sequelize may be undefined
+    expect(
+      db.sequelize === null ||
+        db.sequelize === undefined ||
+        (typeof db.sequelize === 'object' && db.sequelize !== null),
+      'Sequelize instance should be null, undefined, or an object'
+    ).toBe(true);
+  });
 });

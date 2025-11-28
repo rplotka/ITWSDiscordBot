@@ -13,7 +13,7 @@ module.exports = {
   async execute(interaction) {
     if (
       !interaction.isStringSelectMenu() ||
-      interaction.customId !== 'course-remove-teams' ||
+      interaction.customId !== 'remove-teams' ||
       !interaction.values.length
     )
       return;

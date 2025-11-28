@@ -72,16 +72,27 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 
 ### Join Course
 
-**Command:** `/join course`
+**Command:** `/join course [course]`
 
 **Description:** Join a publicly available course. This gives you access to the course's channels and role.
 
 **Who can use:** Everyone (for public courses)
 
+**Parameters:**
+
+- `course` (optional) - Course to join (with autocomplete)
+
+**Examples:**
+
+```
+/join course                    # Show available courses in dropdown
+/join course course:ITWS 4500   # Join a specific course directly
+```
+
 **What happens:**
 
-1. A dropdown menu appears with available courses you're not already in
-2. Select a course from the dropdown
+1. **Without parameter:** A dropdown menu appears with available courses you're not already in
+2. **With parameter:** Directly joins the specified course
 3. The bot assigns you the course role and grants access to course channels
 4. You'll receive a confirmation message
 
@@ -89,33 +100,64 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 
 ### Leave Course
 
-**Command:** `/leave course`
+**Command:** `/leave course [course]`
 
 **Description:** Leave a course you're currently enrolled in.
 
 **Who can use:** Everyone
 
+**Parameters:**
+
+- `course` (optional) - Course to leave (with autocomplete)
+
+**Examples:**
+
+```
+/leave course                    # Show enrolled courses in dropdown
+/leave course course:ITWS 4500   # Leave a specific course directly
+```
+
 **What happens:**
 
-1. A dropdown menu appears with courses you're currently in
-2. Select a course from the dropdown
-3. The bot removes your course role and revokes access to course channels
+1. **Without parameter:** A dropdown menu appears with courses you're currently in
+2. **With parameter:** Directly leaves the specified course
+3. The bot removes your course role and any team roles in that course
+4. Access to course channels is revoked
 
 ---
 
 ### Join Team
 
-**Command:** `/join team`
+**Command:** `/join team [team] [from]`
 
-**Description:** Join a team within a course you're enrolled in.
+**Description:** Join a team within a course you're enrolled in, or switch between teams.
 
 **Who can use:** Everyone (must be enrolled in the course first)
 
+**Parameters:**
+
+- `team` (optional) - Team to join (with autocomplete)
+- `from` (optional) - Current team to switch from (for team switching)
+
+**Examples:**
+
+```
+/join team                           # Show available teams to join
+/join team team:ITWS-Team-01         # Join a specific team directly
+/join team team:ITWS-Team-02 from:ITWS-Team-01   # Switch teams
+```
+
 **What happens:**
 
-1. A dropdown menu appears with available teams from courses you're enrolled in
-2. Select a team from the dropdown
-3. The bot assigns you the team role and grants access to team channels
+1. **Without parameters:** A dropdown menu appears with available teams from courses you're enrolled in
+2. **With team parameter:** Directly joins the specified team
+3. **With both team and from:** Switches you from one team to another (removes old role, adds new role)
+
+**Notes:**
+
+- You must be enrolled in the course before joining a team
+- You can only be in one team per course
+- Team switching only works for teams in the same course
 
 ---
 
@@ -307,7 +349,7 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
 | `/help`          | Everyone    | List all commands                |
 | `/test`          | Moderators  | Post role selection buttons      |
 | `/join course`   | Everyone    | Join a public course             |
-| `/join team`     | Everyone    | Join a course team               |
+| `/join team`     | Everyone    | Join or switch teams             |
 | `/leave course`  | Everyone    | Leave a course                   |
 | `/leave team`    | Everyone    | Leave a course team              |
 | `/add course`    | Moderators  | Create a new course              |

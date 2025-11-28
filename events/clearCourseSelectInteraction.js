@@ -13,7 +13,7 @@ module.exports = {
   async execute(interaction) {
     if (
       !interaction.isStringSelectMenu() ||
-      interaction.customId !== 'course-clear' ||
+      interaction.customId !== 'clear-course' ||
       !interaction.values.length
     )
       return;
@@ -53,18 +53,18 @@ module.exports = {
       // Show confirmation with buttons
       const confirmRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`clear-confirm-${courseId}`)
+          .setCustomId(`clear-course-confirm-${courseId}`)
           .setLabel('Clear Course')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🗑️'),
         new ButtonBuilder()
-          .setCustomId(`clear-confirm-teams-${courseId}`)
+          .setCustomId(`clear-course-confirm-teams-${courseId}`)
           .setLabel('Clear Course + Remove Teams')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('💥')
           .setDisabled(teamCount === 0),
         new ButtonBuilder()
-          .setCustomId('clear-cancel')
+          .setCustomId('clear-course-cancel')
           .setLabel('Cancel')
           .setStyle(ButtonStyle.Secondary)
       );

@@ -9,128 +9,230 @@ const {
 const { Op } = require('sequelize');
 const { CourseTeam } = require('./db');
 const logger = require('./logging');
-const { coursePermissions, courseChannelTopics } = require('./constants');
+const {
+  coursePermissions,
+  courseChannelTopics,
+  customIds,
+} = require('./constants');
+const { withRollback } = require('./rollback');
 
 /**
- * Creates a modal for adding teams to a course
- * @param {string} courseId - The ID of the course to add teams to
+ * Generates sequential team names in format: {courseShort}-Team-{seq}
+ * @param {string} courseShortTitle - Short title of the course
+ * @param {number} count - Number of teams to generate
+ * @param {number} startFrom - Starting sequence number (default 1)
+ * @returns {string[]} Array of team names
  */
-const addTeamsModalFactory = (courseId) => {
+function generateSequentialTeamNames(courseShortTitle, count, startFrom = 1) {
+  const names = [];
+  for (let i = 0; i < count; i += 1) {
+    const seq = String(startFrom + i).padStart(2, '0');
+    names.push(`${courseShortTitle}-Team-${seq}`);
+  }
+  return names;
+}
+
+/**
+ * Looks up a guild member by username or nickname
+ * @param {Discord.Guild} guild - The Discord guild
+ * @param {string} identifier - Username or nickname to search for
+ * @returns {Promise<Discord.GuildMember|null>} The member if found
+ */
+async function findMemberByIdentifier(guild, identifier) {
+  const searchTerm = identifier.toLowerCase().trim();
+
+  // First try to fetch all members to ensure cache is populated
+  try {
+    await guild.members.fetch();
+  } catch (error) {
+    logger.warn(`Could not fetch all members: ${error.message}`);
+  }
+
+  // Search by username or nickname
+  const member = guild.members.cache.find(
+    (m) =>
+      m.user.username.toLowerCase() === searchTerm ||
+      m.nickname?.toLowerCase() === searchTerm ||
+      m.user.tag.toLowerCase().startsWith(searchTerm)
+  );
+
+  return member || null;
+}
+
+/**
+ * Gets members with a specific role (e.g., Faculty)
+ * @param {Discord.Guild} guild - The Discord guild
+ * @param {string} roleName - Name of the role to filter by
+ * @returns {Discord.Collection<string, Discord.GuildMember>} Members with the role
+ */
+function getMembersWithRole(guild, roleName) {
+  const role = guild.roles.cache.find(
+    (r) => r.name.toLowerCase() === roleName.toLowerCase()
+  );
+  if (!role) return new Map();
+  return role.members;
+}
+
+/**
+ * Creates a modal for adding teams to a course (count-based)
+ * @param {string} courseId - The ID of the course to add teams to
+ * @param {string} courseTitle - Title of the course (for display)
+ * @param {number} existingTeamCount - Number of existing teams
+ */
+const addTeamsModalFactory = (
+  courseId,
+  courseTitle = '',
+  existingTeamCount = 0
+) => {
   const modal = new ModalBuilder()
-    .setCustomId(`add-teams-modal-${courseId}`)
-    .setTitle('Add Teams to Course');
+    .setCustomId(customIds.team.addModal(courseId))
+    .setTitle(
+      courseTitle ? `Add Teams: ${courseTitle.substring(0, 30)}` : 'Add Teams'
+    );
 
-  const teamNamesInput = new TextInputBuilder()
-    .setCustomId('add-teams-modal-names')
-    .setLabel('Team names (comma-separated)')
-    .setPlaceholder('e.g. Alpha, Beta, Gamma or Team 1, Team 2, Team 3')
+  const nextNum = existingTeamCount + 1;
+  const placeholder =
+    existingTeamCount > 0
+      ? `Will create Team-${String(nextNum).padStart(2, '0')}, Team-${String(
+          nextNum + 1
+        ).padStart(2, '0')}, etc.`
+      : 'Will create Team-01, Team-02, etc.';
+
+  const teamCountInput = new TextInputBuilder()
+    .setCustomId('add-teams-count')
+    .setLabel('How many teams to create?')
+    .setPlaceholder(placeholder)
     .setRequired(true)
-    .setStyle(TextInputStyle.Paragraph);
+    .setMaxLength(2)
+    .setStyle(TextInputStyle.Short);
 
-  const row1 = new ActionRowBuilder().addComponents(teamNamesInput);
+  const row1 = new ActionRowBuilder().addComponents(teamCountInput);
   modal.addComponents(row1);
 
   return modal;
 };
 
-const addCourseModalFactory = () => {
+/**
+ * Creates a modal for adding a course with optional pre-filled values
+ * @param {Object} prefill - Optional pre-filled values
+ * @param {string} prefill.name - Course full name
+ * @param {string} prefill.short - Course short name
+ * @param {string} prefill.instructor - Instructor identifier
+ * @param {number} prefill.teams - Number of teams
+ */
+const addCourseModalFactory = (prefill = {}) => {
   const modal = new ModalBuilder()
-    .setCustomId('add-course-modal')
+    .setCustomId(customIds.course.addModal)
     .setTitle('Add Course');
 
-  // Add inputs for DB fields
-  // - title
-  // - shortTitle
-  // - isPublic
-  // - instructors
-
   const titleInput = new TextInputBuilder()
-    .setCustomId('add-course-modal-title')
+    .setCustomId('add-course-title')
     .setLabel("What's the FULL name of the course?")
     .setRequired(true)
     .setStyle(TextInputStyle.Short);
 
+  if (prefill.name) {
+    titleInput.setValue(prefill.name);
+  }
+
   const shortTitleInput = new TextInputBuilder()
-    .setCustomId('add-course-modal-short-title')
+    .setCustomId('add-course-short')
     .setLabel("What's the SHORT name of the course?")
-    .setPlaceholder('e.g. intro, mitr, capstone')
+    .setPlaceholder('e.g. intro, mitr, capstone (used in channel names)')
     .setRequired(true)
     .setStyle(TextInputStyle.Short);
 
-  // Discord does not yet appear to support select menus in modals
-
-  // const isPublicInput = new StringSelectMenuBuilder()
-  //   .setCustomId('add-course-modal-is-public')
-  //   .setPlaceholder('Can students freely join?')
-  //   .setOptions([
-  //     {
-  //       label: 'Publicly Joinable',
-  //       value: 'yes',
-  //       description: 'Students can join via `/join course`',
-  //       emoji: '🔓',
-  //     },
-  //     {
-  //       label: 'Locked',
-  //       value: 'no',
-  //       description: 'Students can only be added by instructors',
-  //       emoji: '🔒',
-  //     },
-  //   ]);
+  if (prefill.short) {
+    shortTitleInput.setValue(prefill.short);
+  }
 
   const instructorsInput = new TextInputBuilder()
-    .setCustomId('add-course-modal-instructors')
-    .setLabel('Who is instructing the course?')
-    .setPlaceholder('Comma-separated list of instructor RCS IDs')
+    .setCustomId('add-course-instructor')
+    .setLabel('Instructor username/nickname')
+    .setPlaceholder('Discord username of instructor (will auto-assign role)')
     .setRequired(true)
+    .setStyle(TextInputStyle.Short);
+
+  if (prefill.instructor) {
+    instructorsInput.setValue(prefill.instructor);
+  }
+
+  const teamsInput = new TextInputBuilder()
+    .setCustomId('add-course-teams')
+    .setLabel('Number of teams (0 for none)')
+    .setPlaceholder('Enter 0 to skip team creation, or a number like 5')
+    .setRequired(true)
+    .setValue(prefill.teams !== undefined ? String(prefill.teams) : '0')
+    .setMaxLength(2)
     .setStyle(TextInputStyle.Short);
 
   const row1 = new ActionRowBuilder().addComponents(titleInput);
   const row2 = new ActionRowBuilder().addComponents(shortTitleInput);
   const row3 = new ActionRowBuilder().addComponents(instructorsInput);
-  // const row4 = new ActionRowBuilder().addComponents(isPublicInput);
+  const row4 = new ActionRowBuilder().addComponents(teamsInput);
 
-  modal.addComponents(row1, row2, row3);
+  modal.addComponents(row1, row2, row3, row4);
 
   return modal;
 };
 
 /**
- * @param {"join" | "leave" | "remove"} courseAction
+ * Creates a course selector dropdown
+ * @param {"join" | "leave" | "remove" | "clear" | "add-teams" | "remove-teams" | "add-students"} action
  * @param {Course[]} courses
  */
-const courseSelectorActionRowFactory = (courseAction, courses) =>
-  new ActionRowBuilder().addComponents(
+const courseSelectorActionRowFactory = (action, courses) => {
+  // Map actions to custom IDs
+  const customIdMap = {
+    join: customIds.course.join,
+    leave: customIds.course.leave,
+    remove: customIds.course.remove,
+    clear: customIds.course.clear,
+    'add-teams': 'add-team-select',
+    'remove-teams': 'remove-team-select',
+    'add-students': customIds.students.selectCourse,
+  };
+
+  return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`course-${courseAction}`)
+      .setCustomId(customIdMap[action] || `${action}-course`)
       .setPlaceholder('Select a course')
       .setOptions(
         courses.map((course) => ({
           label: course.title,
-          description: `Instructed by ${course.instructors.join(', ')}`,
+          description: course.instructors?.length
+            ? `Instructed by ${course.instructors.join(', ')}`
+            : course.shortTitle,
           value: course.id.toString(),
         }))
       )
   );
+};
 
 /**
- * @param {"join" | "leave"} courseTeamAction
- * @param {CourseTeam[]} courseTeamsWithCourse
+ * Creates a team selector dropdown
+ * @param {"join" | "leave"} action
+ * @param {CourseTeam[]} courseTeamsWithCourse - Teams with Course included
  */
-const courseTeamSelectorActionRowFactory = (
-  courseTeamAction,
-  courseTeamsWithCourse
-) =>
-  new ActionRowBuilder().addComponents(
+const courseTeamSelectorActionRowFactory = (action, courseTeamsWithCourse) => {
+  const customIdMap = {
+    join: customIds.team.join,
+    leave: customIds.team.leave,
+  };
+
+  return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`course-team-${courseTeamAction}`)
-      .setPlaceholder(`Select a team to ${courseTeamAction}`)
+      .setCustomId(customIdMap[action] || `${action}-team`)
+      .setPlaceholder(`Select a team to ${action}`)
       .setOptions(
         courseTeamsWithCourse.map((courseTeam) => ({
-          label: `${courseTeam.title} (${courseTeam.Course.title})`,
+          label: courseTeam.title,
+          description: courseTeam.Course?.title || 'Unknown course',
           value: courseTeam.id.toString(),
         }))
       )
   );
+};
 
 /**
  * Creates a multi-select dropdown for removing teams from a course
@@ -140,7 +242,7 @@ const courseTeamSelectorActionRowFactory = (
 const removeTeamsSelectorActionRowFactory = (courseId, teams) =>
   new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`teams-remove-${courseId}`)
+      .setCustomId(customIds.team.remove(courseId))
       .setPlaceholder('Select teams to remove')
       .setMinValues(1)
       .setMaxValues(teams.length)
@@ -151,6 +253,48 @@ const removeTeamsSelectorActionRowFactory = (courseId, teams) =>
         }))
       )
   );
+
+/**
+ * Creates a channel selector dropdown
+ * @param {Discord.Guild} guild - The Discord guild
+ * @param {"remove" | "clear"} action - Action to perform
+ * @param {string} [filterPattern] - Optional pattern to filter channels
+ */
+const channelSelectorActionRowFactory = (
+  guild,
+  action,
+  filterPattern = null
+) => {
+  let channels = Array.from(guild.channels.cache.values()).filter(
+    (c) => c.type === ChannelType.GuildText || c.type === ChannelType.GuildVoice
+  );
+
+  if (filterPattern) {
+    const regex = new RegExp(filterPattern.replace(/\*/g, '.*'), 'i');
+    channels = channels.filter((c) => regex.test(c.name));
+  }
+
+  // Limit to 25 options (Discord limit)
+  channels = channels.slice(0, 25);
+
+  const customIdMap = {
+    remove: customIds.channel.remove,
+    clear: customIds.channel.clear,
+  };
+
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(customIdMap[action] || `${action}-channel`)
+      .setPlaceholder(`Select a channel to ${action}`)
+      .setOptions(
+        channels.map((channel) => ({
+          label: channel.name,
+          description: channel.parent?.name || 'No category',
+          value: channel.id,
+        }))
+      )
+  );
+};
 
 /**
  * Finds the #general text channel for a particular course on a server (guild).
@@ -638,20 +782,135 @@ async function clearCourse(guild, course, options = {}) {
   return results;
 }
 
+/**
+ * Clears a channel by cloning it and deleting the original
+ * @param {Discord.TextChannel} channel - The channel to clear
+ * @returns {Promise<Discord.TextChannel>} The new channel
+ */
+async function clearChannel(channel) {
+  const {
+    name,
+    topic,
+    position,
+    permissionOverwrites,
+    rateLimitPerUser,
+    parent,
+    nsfw,
+  } = channel;
+
+  // Clone the channel
+  const newChannel = await channel.guild.channels.create({
+    name,
+    type: ChannelType.GuildText,
+    topic,
+    parent: parent?.id,
+    position,
+    permissionOverwrites: Array.from(permissionOverwrites.cache.values()),
+    rateLimitPerUser,
+    nsfw,
+  });
+
+  // Delete the original
+  await channel.delete('Channel cleared by bot');
+
+  logger.info(`Cleared channel: ${name}`);
+  return newChannel;
+}
+
+/**
+ * Switches a member from one team to another (atomic operation)
+ * @param {Discord.GuildMember} member - The member switching teams
+ * @param {CourseTeam} fromTeam - Team to leave
+ * @param {CourseTeam} toTeam - Team to join
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function switchTeam(member, fromTeam, toTeam) {
+  // Validate same course
+  if (fromTeam.CourseId !== toTeam.CourseId) {
+    return { success: false, error: 'Teams must be in the same course' };
+  }
+
+  // Check member has the from team role
+  if (!member.roles.cache.has(fromTeam.discordRoleId)) {
+    return { success: false, error: `You are not in ${fromTeam.title}` };
+  }
+
+  // Check member doesn't already have the to team role
+  if (member.roles.cache.has(toTeam.discordRoleId)) {
+    return { success: false, error: `You are already in ${toTeam.title}` };
+  }
+
+  try {
+    // Add new role first (so if it fails, we don't remove the old one)
+    await member.roles.add(toTeam.discordRoleId);
+
+    // Send welcome to new team
+    try {
+      const toChannel = member.guild.channels.cache.get(
+        toTeam.discordTextChannelId
+      );
+      if (toChannel) {
+        await toChannel.send(
+          `👋 Welcome ${member}! (switched from ${fromTeam.title})`
+        );
+      }
+    } catch (error) {
+      logger.warn(`Failed to send welcome message: ${error.message}`);
+    }
+
+    // Remove old role
+    await member.roles.remove(fromTeam.discordRoleId);
+
+    // Send goodbye to old team
+    try {
+      const fromChannel = member.guild.channels.cache.get(
+        fromTeam.discordTextChannelId
+      );
+      if (fromChannel) {
+        await fromChannel.send(`👋 ${member} has switched to ${toTeam.title}`);
+      }
+    } catch (error) {
+      logger.warn(`Failed to send goodbye message: ${error.message}`);
+    }
+
+    logger.info(
+      `${member.user.tag} switched from ${fromTeam.title} to ${toTeam.title}`
+    );
+    return { success: true };
+  } catch (error) {
+    logger.error(`Failed to switch teams: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
+  // Course operations
   removeCourse,
   clearCourse,
+  // Team operations
+  createTeamsForCourse,
+  removeTeams,
+  switchTeam,
+  generateSequentialTeamNames,
+  // Member operations
+  addMemberToCourse,
+  removeMemberFromCourse,
+  addMemberToCourseTeam,
+  removeMemberFromCourseTeam,
+  toggleMemberRole,
+  // Channel operations
+  findCourseGeneralChannel,
+  clearChannel,
+  // Lookup helpers
+  findMemberByIdentifier,
+  getMembersWithRole,
+  // UI Factories
   addCourseModalFactory,
   addTeamsModalFactory,
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,
   removeTeamsSelectorActionRowFactory,
-  addMemberToCourse,
-  removeMemberFromCourse,
-  addMemberToCourseTeam,
-  removeMemberFromCourseTeam,
-  findCourseGeneralChannel,
-  toggleMemberRole,
-  createTeamsForCourse,
-  removeTeams,
+  channelSelectorActionRowFactory,
+  // Rollback
+  withRollback,
 };
