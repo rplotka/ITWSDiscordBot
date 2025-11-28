@@ -231,8 +231,11 @@ module.exports = {
         return;
       }
 
-      // Legacy import orphans - redirect to delete
-      if (action === 'sync-import-orphans') {
+      // Remove orphans button
+      if (
+        action === 'sync-remove-orphans' ||
+        action === 'sync-import-orphans'
+      ) {
         await interaction.deferUpdate();
 
         const orphanedRoles = await findOrphanedRoles(interaction.guild);

@@ -241,10 +241,10 @@ async function handleSyncServer(interaction) {
     if (hasOrphans) {
       buttons.push(
         new ButtonBuilder()
-          .setCustomId('sync-import-orphans')
-          .setLabel('Import Orphans')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('📥')
+          .setCustomId('sync-remove-orphans')
+          .setLabel('Remove Orphans')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🗑️')
       );
     }
 
