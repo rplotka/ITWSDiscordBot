@@ -7,9 +7,10 @@
     "start": "node index.js",
     "dev": "nodemon index.js | pino-pretty",
     "deploy-commands": "node deploy-commands.js",
-    "test": "ava",
-    "test:watch": "ava --watch",
-    "test:coverage": "c8 ava",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,md}\"",
@@ -41,7 +42,7 @@
     "sequelize": "^6.20.1"
   },
   "devDependencies": {
-    "ava": "^4.2.0",
+    "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^8.16.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.5.0",
@@ -50,7 +51,8 @@
     "lint-staged": "^15.5.2",
     "nodemon": "^2.0.16",
     "pino-pretty": "^13.1.2",
-    "prettier": "^2.6.2"
+    "prettier": "^2.6.2",
+    "vitest": "^4.0.14"
   },
   "lint-staged": {
     "*.js": [

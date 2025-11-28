@@ -1,14 +1,14 @@
 /**
  * Health check endpoint tests
  */
-const test = require('ava');
-const http = require('http');
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import http from 'http';
 
 // Start a test server
 let server;
 let serverPort;
 
-test.before(async () => {
+beforeAll(async () => {
   // Create a minimal HTTP server for testing
   server = http.createServer((req, res) => {
     if (req.url === '/health' && req.method === 'GET') {
@@ -29,41 +29,43 @@ test.before(async () => {
   });
 });
 
-test.after.always(() => {
+afterAll(() => {
   if (server) {
     server.close();
   }
 });
 
-test('health endpoint returns 200 status', async (t) => {
-  const response = await new Promise((resolve, reject) => {
-    const req = http.get(`http://localhost:${serverPort}/health`, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
+describe('health endpoint', () => {
+  it('health endpoint returns 200 status', async () => {
+    const response = await new Promise((resolve, reject) => {
+      const req = http.get(`http://localhost:${serverPort}/health`, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          resolve({ status: res.statusCode, data });
+        });
       });
-      res.on('end', () => {
-        resolve({ status: res.statusCode, data });
-      });
+      req.on('error', reject);
     });
-    req.on('error', reject);
+
+    expect(response.status).toBe(200);
+    const parsed = JSON.parse(response.data);
+    expect(parsed).toEqual({ status: 'ok' });
   });
 
-  t.is(response.status, 200);
-  const parsed = JSON.parse(response.data);
-  t.deepEqual(parsed, { status: 'ok' });
-});
+  it('non-existent endpoint returns 404', async () => {
+    const response = await new Promise((resolve, reject) => {
+      const req = http.get(
+        `http://localhost:${serverPort}/nonexistent`,
+        (res) => {
+          resolve({ status: res.statusCode });
+        }
+      );
+      req.on('error', reject);
+    });
 
-test('non-existent endpoint returns 404', async (t) => {
-  const response = await new Promise((resolve, reject) => {
-    const req = http.get(
-      `http://localhost:${serverPort}/nonexistent`,
-      (res) => {
-        resolve({ status: res.statusCode });
-      }
-    );
-    req.on('error', reject);
+    expect(response.status).toBe(404);
   });
-
-  t.is(response.status, 404);
 });
