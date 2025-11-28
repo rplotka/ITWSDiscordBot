@@ -526,8 +526,121 @@ async function toggleMemberRole(member, roleOrRoleId) {
   return true;
 }
 
+/**
+ * Clears a course by removing all students, clearing channel messages,
+ * and optionally removing teams
+ * @param {Discord.Guild} guild
+ * @param {Course} course
+ * @param {Object} options
+ * @param {boolean} options.removeStudents - Remove all students from course
+ * @param {boolean} options.clearMessages - Clear messages in course channels
+ * @param {boolean} options.removeTeams - Remove all teams from course
+ * @returns {Promise<{studentsRemoved: number, messagesCleared: number, teamsRemoved: number}>}
+ */
+async function clearCourse(guild, course, options = {}) {
+  const {
+    removeStudents = true,
+    clearMessages = true,
+    removeTeams: shouldRemoveTeams = false,
+  } = options;
+  const results = { studentsRemoved: 0, messagesCleared: 0, teamsRemoved: 0 };
+
+  // Get course teams
+  const courseTeams = await CourseTeam.findAll({
+    where: { CourseId: course.id },
+  });
+
+  // Remove students from course (remove course role from all members)
+  if (removeStudents && course.discordRoleId) {
+    const role = guild.roles.cache.get(course.discordRoleId);
+    if (role) {
+      const { members } = role;
+      // Remove role from each member sequentially to avoid rate limits
+      const memberArray = Array.from(members.values());
+      await memberArray.reduce(async (promise, member) => {
+        await promise;
+        try {
+          // Also remove team roles
+          const teamRoleIds = courseTeams
+            .map((t) => t.discordRoleId)
+            .filter((id) => id && member.roles.cache.has(id));
+          if (teamRoleIds.length > 0) {
+            await member.roles.remove(teamRoleIds);
+          }
+          // Remove course role
+          await member.roles.remove(course.discordRoleId);
+          results.studentsRemoved += 1;
+        } catch (error) {
+          logger.warn(
+            `Failed to remove role from ${member.user.tag}: ${error.message}`
+          );
+        }
+      }, Promise.resolve());
+    }
+  }
+
+  // Clear messages in course channels
+  if (clearMessages && course.discordCategoryId) {
+    const category = guild.channels.cache.get(course.discordCategoryId);
+    if (category) {
+      const textChannels = guild.channels.cache.filter(
+        (channel) =>
+          channel.parentId === course.discordCategoryId &&
+          channel.type === ChannelType.GuildText
+      );
+
+      // Clone and recreate each text channel to clear messages
+      const channelArray = Array.from(textChannels.values());
+      await channelArray.reduce(async (promise, channel) => {
+        await promise;
+        try {
+          // Store channel properties
+          const {
+            name,
+            topic,
+            position,
+            permissionOverwrites,
+            rateLimitPerUser,
+          } = channel;
+
+          // Delete the channel
+          await channel.delete('Course clear - recreating channel');
+
+          // Recreate with same properties
+          await guild.channels.create({
+            name,
+            type: ChannelType.GuildText,
+            topic,
+            parent: course.discordCategoryId,
+            position,
+            permissionOverwrites: Array.from(
+              permissionOverwrites.cache.values()
+            ),
+            rateLimitPerUser,
+          });
+
+          results.messagesCleared += 1;
+        } catch (error) {
+          logger.warn(
+            `Failed to clear channel ${channel.name}: ${error.message}`
+          );
+        }
+      }, Promise.resolve());
+    }
+  }
+
+  // Remove teams if requested
+  if (shouldRemoveTeams && courseTeams.length > 0) {
+    await removeTeams(guild, courseTeams);
+    results.teamsRemoved = courseTeams.length;
+  }
+
+  return results;
+}
+
 module.exports = {
   removeCourse,
+  clearCourse,
   addCourseModalFactory,
   addTeamsModalFactory,
   courseSelectorActionRowFactory,
