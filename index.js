@@ -12,7 +12,12 @@ const logger = require('./core/logging');
 dotenv.config();
 
 // Create a new client instance
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// Intents:
+// - Guilds: Required for basic guild operations (channels, roles, etc.)
+// - GuildMembers: Required to fetch guild members for autocomplete and role assignment
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+});
 
 // Find event listeners
 const eventsPath = path.join(__dirname, 'events');

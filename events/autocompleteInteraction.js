@@ -75,30 +75,59 @@ async function handleTeamAutocomplete(interaction, query, fieldName) {
 }
 
 /**
- * Handle instructor autocomplete (from Faculty role members)
+ * Handle instructor autocomplete (from Faculty/Instructor roles)
+ * Searches multiple common role names used for instructors
  */
 async function handleInstructorAutocomplete(interaction, query) {
-  // Try to get members with Faculty role
-  const facultyMembers = getMembersWithRole(interaction.guild, 'Faculty');
+  // Try multiple common role names for faculty/instructors
+  const facultyRoleNames = [
+    'Faculty',
+    'Instructor',
+    'Instructors',
+    'Professor',
+    'Professors',
+    'Teacher',
+    'Teachers',
+    'Staff',
+  ];
 
-  let members;
-  if (facultyMembers.size > 0) {
-    members = Array.from(facultyMembers.values());
+  const members = new Map();
+
+  // Try to find members from any of the faculty role names
+  facultyRoleNames.forEach((roleName) => {
+    const roleMembers = getMembersWithRole(interaction.guild, roleName);
+    if (roleMembers.size > 0) {
+      // Merge members from this role
+      roleMembers.forEach((member, id) => {
+        members.set(id, member);
+      });
+    }
+  });
+
+  let memberList;
+  if (members.size > 0) {
+    memberList = Array.from(members.values());
+    logger.info(
+      `Instructor autocomplete: Found ${memberList.length} faculty/instructor members`
+    );
   } else {
-    // Fallback: get all members if no Faculty role exists
+    // Fallback: get all members if no faculty/instructor role exists
+    logger.info(
+      'Instructor autocomplete: No faculty roles found, falling back to all members'
+    );
     try {
       await interaction.guild.members.fetch();
-      members = Array.from(interaction.guild.members.cache.values()).slice(
+      memberList = Array.from(interaction.guild.members.cache.values()).slice(
         0,
         100
       );
     } catch (error) {
       logger.warn(`Could not fetch members: ${error.message}`);
-      members = [];
+      memberList = [];
     }
   }
 
-  const filtered = members
+  const filtered = memberList
     .filter(
       (m) =>
         m.user.username.toLowerCase().includes(query) ||
