@@ -222,7 +222,7 @@ module.exports = {
                 item.name.length > 20 ? item.name.substring(0, 20) : item.name,
               isPublic: true,
               discordRoleId: item.courseRole?.id || null,
-              discordInstructorRoleId: item.instructorRole.id,
+              discordInstructorRoleId: item.instructorRole?.id || null,
               discordCategoryId: item.category?.id || null,
             };
 

@@ -167,7 +167,11 @@ async function handleSyncImport(interaction) {
 
     importable.slice(0, 15).forEach((item, index) => {
       report += `**${index + 1}. ${item.name}**\n`;
-      report += `   • Instructor Role: ${item.instructorRole.name} (${item.instructorCount} members)\n`;
+      if (item.instructorRole) {
+        report += `   • Instructor Role: ${item.instructorRole.name} (${item.instructorCount} members)\n`;
+      } else {
+        report += `   • Instructor Role: ⚠️ Not found\n`;
+      }
       if (item.courseRole) {
         report += `   • Course Role: ${item.courseRole.name} (${item.memberCount} members)\n`;
       } else {
