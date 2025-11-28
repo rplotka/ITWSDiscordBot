@@ -51,11 +51,10 @@ jobs:
       - name: Build and push Docker image
         run: |
           IMAGE_TAG="gcr.io/$PROJECT_ID/$SERVICE_NAME:${{ github.sha }}"
-          # Use the authenticated service account for Cloud Build
-          # Use REGIONAL_USER_OWNED_BUCKET to avoid needing to specify a logs bucket
-          gcloud builds submit --tag $IMAGE_TAG --project=$PROJECT_ID \
-            --service-account=github-actions@$PROJECT_ID.iam.gserviceaccount.com \
-            --default-logging-bucket-behavior=REGIONAL_USER_OWNED_BUCKET
+          # Build and push Docker image
+          # Note: Using default Cloud Build service account to avoid logging bucket issues
+          # The authenticated service account is used for deployment, not build
+          gcloud builds submit --tag $IMAGE_TAG --project=$PROJECT_ID
       
       - name: Deploy to Cloud Run
         run: |
