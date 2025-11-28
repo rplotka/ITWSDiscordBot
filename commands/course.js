@@ -170,12 +170,20 @@ module.exports = {
 
     // /course remove-teams - Show course selector, then team multi-select
     if (subcommand === 'remove-teams') {
+      logger.info('remove-teams: Starting command execution');
+
+      // Ensure interaction is deferred (may already be done by commandInteraction.js)
       if (!interaction.deferred && !interaction.replied) {
+        logger.info('remove-teams: Deferring reply');
         await interaction.deferReply({ ephemeral: true });
+      } else {
+        logger.info(
+          `remove-teams: Already deferred=${interaction.deferred}, replied=${interaction.replied}`
+        );
       }
 
       if (!Course || !CourseTeam) {
-        logger.error('Database models not available');
+        logger.error('remove-teams: Database models not available');
         await interaction.editReply({
           content: '❌ Database is not available. Please contact a Moderator!',
         });
@@ -183,25 +191,22 @@ module.exports = {
       }
 
       try {
-        const withTimeout = (queryPromise, timeoutMs = 8000) => {
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('Database query timed out'));
-            }, timeoutMs);
-          });
-          return Promise.race([queryPromise, timeoutPromise]);
-        };
+        logger.info('remove-teams: Querying database for courses with teams');
 
         // Get courses that have teams
-        const courses = await withTimeout(
-          Course.findAll({
-            include: [{ model: CourseTeam, as: 'CourseTeams' }],
-          })
-        );
+        const courses = await Course.findAll({
+          include: [{ model: CourseTeam, as: 'CourseTeams' }],
+        });
+
+        logger.info(`remove-teams: Found ${courses.length} total courses`);
 
         // Filter to only courses with teams
         const coursesWithTeams = courses.filter(
           (c) => c.CourseTeams && c.CourseTeams.length > 0
+        );
+
+        logger.info(
+          `remove-teams: ${coursesWithTeams.length} courses have teams`
         );
 
         if (coursesWithTeams.length === 0) {
@@ -219,15 +224,13 @@ module.exports = {
           content: '❔ Choose a course to **remove teams** from:',
           components: [row],
         });
+        logger.info('remove-teams: Successfully showed course selector');
       } catch (error) {
         logger.error('Error in /course remove-teams command:', error);
-        let errorMessage = `❌ Error: ${error.message}. Please contact a Moderator!`;
-        if (error.message && error.message.includes('timed out')) {
-          errorMessage =
-            '❌ Database query timed out. Please try again or contact a Moderator!';
-        }
+        logger.error(`remove-teams error message: ${error.message}`);
+        logger.error(`remove-teams error stack: ${error.stack}`);
         await interaction.editReply({
-          content: errorMessage,
+          content: `❌ Error: ${error.message}. Please contact a Moderator!`,
         });
       }
       return;
