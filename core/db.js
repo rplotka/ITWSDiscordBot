@@ -43,7 +43,7 @@ const sequelizeConfig = {
   },
 };
 
-// For Unix socket connections (Cloud SQL), explicitly disable SSL
+// For Unix socket connections (Cloud SQL), completely omit SSL configuration
 // For regular connections, enable SSL
 if (!isUnixSocket) {
   sequelizeConfig.dialectOptions = {
@@ -53,12 +53,11 @@ if (!isUnixSocket) {
     },
   };
 } else {
-  // For Unix sockets, explicitly disable SSL in dialectOptions
-  sequelizeConfig.dialectOptions = {
-    ssl: false,
-  };
+  // For Unix sockets, DO NOT set dialectOptions at all
+  // The sslmode=disable in the connection string is sufficient
+  // Setting ssl: false can still trigger SSL negotiation attempts
   logger.info(
-    'Detected Cloud SQL Unix socket connection - SSL explicitly disabled'
+    'Detected Cloud SQL Unix socket connection - omitting SSL configuration'
   );
 }
 
