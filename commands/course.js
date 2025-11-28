@@ -183,10 +183,21 @@ module.exports = {
       }
 
       try {
+        const withTimeout = (queryPromise, timeoutMs = 8000) => {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('Database query timed out'));
+            }, timeoutMs);
+          });
+          return Promise.race([queryPromise, timeoutPromise]);
+        };
+
         // Get courses that have teams
-        const courses = await Course.findAll({
-          include: [{ model: CourseTeam, as: 'CourseTeams' }],
-        });
+        const courses = await withTimeout(
+          Course.findAll({
+            include: [{ model: CourseTeam, as: 'CourseTeams' }],
+          })
+        );
 
         // Filter to only courses with teams
         const coursesWithTeams = courses.filter(
@@ -210,8 +221,13 @@ module.exports = {
         });
       } catch (error) {
         logger.error('Error in /course remove-teams command:', error);
+        let errorMessage = `❌ Error: ${error.message}. Please contact a Moderator!`;
+        if (error.message && error.message.includes('timed out')) {
+          errorMessage =
+            '❌ Database query timed out. Please try again or contact a Moderator!';
+        }
         await interaction.editReply({
-          content: `❌ Error: ${error.message}. Please contact a Moderator!`,
+          content: errorMessage,
         });
       }
       return;
