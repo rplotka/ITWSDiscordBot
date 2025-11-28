@@ -13,7 +13,7 @@ module.exports = {
     if (!interaction.isButton()) return;
 
     // Handle cancel button
-    if (interaction.customId === 'clear-cancel') {
+    if (interaction.customId === 'clear-course-cancel') {
       await interaction.update({
         content: '❌ Course clear cancelled.',
         components: [],
@@ -22,9 +22,9 @@ module.exports = {
     }
 
     // Handle clear confirmation buttons
-    const isConfirm = interaction.customId.startsWith('clear-confirm-');
+    const isConfirm = interaction.customId.startsWith('clear-course-confirm-');
     const isConfirmWithTeams = interaction.customId.startsWith(
-      'clear-confirm-teams-'
+      'clear-course-confirm-teams-'
     );
 
     if (!isConfirm && !isConfirmWithTeams) return;
@@ -32,9 +32,12 @@ module.exports = {
     // Extract course ID
     let courseId;
     if (isConfirmWithTeams) {
-      courseId = interaction.customId.replace('clear-confirm-teams-', '');
+      courseId = interaction.customId.replace(
+        'clear-course-confirm-teams-',
+        ''
+      );
     } else {
-      courseId = interaction.customId.replace('clear-confirm-', '');
+      courseId = interaction.customId.replace('clear-course-confirm-', '');
     }
 
     logger.info(

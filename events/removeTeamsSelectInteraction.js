@@ -14,13 +14,13 @@ module.exports = {
     // Check if this is a teams-remove select menu
     if (
       !interaction.isStringSelectMenu() ||
-      !interaction.customId.startsWith('teams-remove-') ||
+      !interaction.customId.startsWith('remove-team-') ||
       !interaction.values.length
     )
       return;
 
     // Extract course ID from customId (format: teams-remove-{courseId})
-    const courseId = interaction.customId.replace('teams-remove-', '');
+    const courseId = interaction.customId.replace('remove-team-', '');
     const teamIds = interaction.values;
 
     logger.info(

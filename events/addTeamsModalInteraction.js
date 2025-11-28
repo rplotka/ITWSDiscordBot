@@ -1,6 +1,9 @@
 const { Course, CourseTeam } = require('../core/db');
 const logger = require('../core/logging');
-const { createTeamsForCourse } = require('../core/utils');
+const {
+  createTeamsForCourse,
+  generateSequentialTeamNames,
+} = require('../core/utils');
 
 module.exports = {
   name: 'interactionCreate',
@@ -14,12 +17,12 @@ module.exports = {
     // Check if this is an add-teams modal submission
     if (
       !interaction.isModalSubmit() ||
-      !interaction.customId.startsWith('add-teams-modal-')
+      !interaction.customId.startsWith('add-team-modal-')
     )
       return;
 
-    // Extract course ID from customId (format: add-teams-modal-{courseId})
-    const courseId = interaction.customId.replace('add-teams-modal-', '');
+    // Extract course ID from customId (format: add-team-modal-{courseId})
+    const courseId = interaction.customId.replace('add-team-modal-', '');
 
     try {
       // Defer reply immediately to prevent timeout
@@ -38,44 +41,35 @@ module.exports = {
         return;
       }
 
-      // Get team names from modal
-      const teamNamesInput = interaction.fields.getTextInputValue(
-        'add-teams-modal-names'
+      // Get team count from modal
+      const teamCountInput = interaction.fields.getTextInputValue(
+        'add-team-modal-count'
       );
-      const teamNames = teamNamesInput
-        .split(',')
-        .map((name) => name.trim())
-        .filter((name) => name.length > 0);
+      const teamCount = parseInt(teamCountInput, 10);
 
-      if (teamNames.length === 0) {
+      if (Number.isNaN(teamCount) || teamCount < 1 || teamCount > 99) {
         await interaction.editReply({
-          content:
-            '❌ No valid team names provided. Please enter team names separated by commas.',
+          content: '❌ Please enter a valid number of teams (1-99).',
         });
         return;
       }
 
-      // Check for duplicate team names in this course
+      // Get existing team count to determine starting number
       const existingTeams = await CourseTeam.findAll({
         where: { CourseId: course.id },
       });
-      const existingNames = existingTeams.map((t) => t.title.toLowerCase());
-      const duplicates = teamNames.filter((name) =>
-        existingNames.includes(name.toLowerCase())
-      );
+      const startFrom = existingTeams.length + 1;
 
-      if (duplicates.length > 0) {
-        await interaction.editReply({
-          content: `❌ These team names already exist in this course: ${duplicates.join(
-            ', '
-          )}`,
-        });
-        return;
-      }
+      // Generate sequential team names
+      const teamNames = generateSequentialTeamNames(
+        course.shortTitle,
+        teamCount,
+        startFrom
+      );
 
       // Create the teams
       await interaction.editReply({
-        content: `⏳ Creating ${teamNames.length} team(s) for **${course.title}**...`,
+        content: `⏳ Creating ${teamCount} team(s) for **${course.title}**...`,
       });
 
       const createdTeams = await createTeamsForCourse(

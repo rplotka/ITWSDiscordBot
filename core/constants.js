@@ -142,3 +142,76 @@ module.exports.coursePermissions = {
   //   },
   // ],
 };
+
+/**
+ * Standardized custom ID patterns for Discord interactions.
+ * Format: [action]-[entity]-[context]
+ */
+module.exports.customIds = {
+  // Course actions
+  course: {
+    add: 'add-course',
+    addModal: 'add-course-modal',
+    remove: 'remove-course',
+    join: 'join-course',
+    leave: 'leave-course',
+    clear: 'clear-course',
+    clearConfirm: (courseId) => `clear-course-confirm-${courseId}`,
+    clearConfirmWithTeams: (courseId) =>
+      `clear-course-confirm-teams-${courseId}`,
+    clearCancel: 'clear-course-cancel',
+  },
+  // Team actions
+  team: {
+    add: (courseId) => `add-team-${courseId}`,
+    addModal: (courseId) => `add-team-modal-${courseId}`,
+    remove: (courseId) => `remove-team-${courseId}`,
+    join: 'join-team',
+    leave: 'leave-team',
+    switch: (courseId, from, to) => `switch-team-${courseId}-${from}-${to}`,
+  },
+  // Channel actions
+  channel: {
+    add: 'add-channel',
+    addModal: 'add-channel-modal',
+    remove: 'remove-channel',
+    clear: 'clear-channel',
+    clearConfirm: (channelId) => `clear-channel-confirm-${channelId}`,
+  },
+  // Sync actions
+  sync: {
+    server: 'sync-server',
+    confirm: 'sync-server-confirm',
+    cancel: 'sync-server-cancel',
+    addToDb: (type, id) => `sync-add-db-${type}-${id}`,
+    removeFromDb: (type, id) => `sync-remove-db-${type}-${id}`,
+    createInDiscord: (type, id) => `sync-create-discord-${type}-${id}`,
+  },
+  // Students bulk actions
+  students: {
+    add: 'add-students',
+    selectCourse: 'add-students-course',
+  },
+  // Helper to parse custom IDs
+  parse: (customId) => {
+    const parts = customId.split('-');
+    if (parts.length < 2)
+      return { action: customId, entity: null, context: null };
+    return {
+      action: parts[0],
+      entity: parts[1],
+      context: parts.slice(2).join('-'),
+    };
+  },
+  // Helper to check if customId matches a pattern
+  matches: (customId, pattern) => {
+    if (typeof pattern === 'string') {
+      return customId === pattern;
+    }
+    if (typeof pattern === 'function') {
+      // For dynamic patterns, check if it starts with the base
+      return customId.startsWith(pattern('').replace(/-$/, ''));
+    }
+    return false;
+  },
+};
