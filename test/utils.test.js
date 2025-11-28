@@ -16,18 +16,18 @@ describe('addCourseModalFactory', () => {
 
     expect(data.custom_id).toBe('add-course-modal');
     expect(data.title).toBe('Add Course');
-    expect(data.components).toHaveLength(4); // Four input fields: title, short, instructor, teams
+    expect(data.components).toHaveLength(4); // Four input fields: course number, title, instructor, teams
 
-    // Check first field (title)
-    const titleField = data.components[0].components[0];
+    // Check first field (course number)
+    const courseNumberField = data.components[0].components[0];
+    expect(courseNumberField.custom_id).toBe('add-course-number');
+    expect(courseNumberField.label).toBe('Course number (e.g., ITWS-4500)');
+    expect(courseNumberField.required).toBe(true);
+
+    // Check second field (title / display name)
+    const titleField = data.components[1].components[0];
     expect(titleField.custom_id).toBe('add-course-title');
-    expect(titleField.label).toBe("What's the FULL name of the course?");
-    expect(titleField.required).toBe(true);
-
-    // Check second field (short title)
-    const shortTitleField = data.components[1].components[0];
-    expect(shortTitleField.custom_id).toBe('add-course-short');
-    expect(shortTitleField.label).toBe("What's the SHORT name of the course?");
+    expect(titleField.label).toBe('Display name (full course title)');
 
     // Check third field (instructor)
     const instructorField = data.components[2].components[0];
@@ -42,18 +42,18 @@ describe('addCourseModalFactory', () => {
 
   it('supports prefill values', () => {
     const modal = addCourseModalFactory({
+      courseNumber: 'ITWS-4500',
       name: 'Test Course',
-      short: 'test',
       instructor: 'testuser',
       teams: 5,
     });
     const data = modal.toJSON();
 
-    const titleField = data.components[0].components[0];
-    expect(titleField.value).toBe('Test Course');
+    const courseNumberField = data.components[0].components[0];
+    expect(courseNumberField.value).toBe('ITWS-4500');
 
-    const shortField = data.components[1].components[0];
-    expect(shortField.value).toBe('test');
+    const titleField = data.components[1].components[0];
+    expect(titleField.value).toBe('Test Course');
 
     const instructorField = data.components[2].components[0];
     expect(instructorField.value).toBe('testuser');
