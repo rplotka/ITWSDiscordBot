@@ -248,8 +248,8 @@ Bot: ✅ You've been removed from Team Alpha.
 
 - `/course add` - Create a new course
 - `/course remove` - Remove a course
-- `/course add-teams` - Add teams to an existing course _(coming soon)_
-- `/course remove-teams` - Remove teams from a course _(coming soon)_
+- `/course add-teams` - Add teams to an existing course
+- `/course remove-teams` - Remove teams from a course
 - `/course clear` - Reset a course (remove students, clear channels) _(coming soon)_
 
 ---
@@ -363,7 +363,34 @@ Bot: ✅ Course "Introduction to ITWS" has been removed along with all roles and
 
 **Who can use:** Moderators and Administrators only
 
-**Status:** 🚧 Coming soon
+**What happens:**
+
+1. A dropdown menu appears with all courses
+2. Select a course to add teams to
+3. A modal form appears asking for team names
+4. Enter team names separated by commas (e.g., "Alpha, Beta, Gamma" or "Team 1, Team 2")
+5. The bot creates for each team:
+   - A team role (e.g., "intro - Alpha")
+   - A private text channel
+   - A private voice channel
+
+**Example interaction:**
+
+```
+You: /course add-teams
+Bot: ❔ Choose a course to add teams to:
+     [Dropdown menu with courses]
+You: [Select "Introduction to ITWS"]
+Bot: [Modal form appears]
+
+Modal Fields:
+- Team names: Alpha, Beta, Gamma
+
+Bot: ✅ Created 3 team(s) for Introduction to ITWS!
+     • Alpha
+     • Beta
+     • Gamma
+```
 
 ---
 
@@ -375,7 +402,30 @@ Bot: ✅ Course "Introduction to ITWS" has been removed along with all roles and
 
 **Who can use:** Moderators and Administrators only
 
-**Status:** 🚧 Coming soon
+**What happens:**
+
+1. A dropdown menu appears with courses that have teams
+2. Select a course to remove teams from
+3. A multi-select dropdown appears with all teams in that course
+4. Select one or more teams to remove
+5. The bot deletes the selected teams' roles, channels, and database records
+
+**Example interaction:**
+
+```
+You: /course remove-teams
+Bot: ❔ Choose a course to remove teams from:
+     [Dropdown menu with courses]
+You: [Select "Introduction to ITWS"]
+Bot: ❔ Select teams to remove from Introduction to ITWS:
+     [Multi-select dropdown with teams]
+You: [Select "Alpha" and "Beta"]
+Bot: ✅ Removed 2 team(s) from Introduction to ITWS!
+     • Alpha
+     • Beta
+```
+
+**Warning:** ⚠️ Removing teams permanently deletes all message history in those channels.
 
 ---
 
@@ -393,19 +443,19 @@ Bot: ✅ Course "Introduction to ITWS" has been removed along with all roles and
 
 ## Command Summary
 
-| Command                       | Who Can Use | Purpose                                    |
-| ----------------------------- | ----------- | ------------------------------------------ |
-| `/help`                       | Everyone    | List all commands                          |
-| `/test item:Send Role Button` | Moderators  | Post role selection buttons                |
-| `/join course`                | Everyone    | Join a public course                       |
-| `/join team`                  | Everyone    | Join a course team                         |
-| `/leave course`               | Everyone    | Leave a course                             |
-| `/leave team`                 | Everyone    | Leave a course team                        |
-| `/course add`                 | Moderators  | Create a new course                        |
-| `/course remove`              | Moderators  | Remove a course                            |
-| `/course add-teams`           | Moderators  | Add teams to a course _(coming soon)_      |
-| `/course remove-teams`        | Moderators  | Remove teams from a course _(coming soon)_ |
-| `/course clear`               | Moderators  | Reset a course _(coming soon)_             |
+| Command                       | Who Can Use | Purpose                        |
+| ----------------------------- | ----------- | ------------------------------ |
+| `/help`                       | Everyone    | List all commands              |
+| `/test item:Send Role Button` | Moderators  | Post role selection buttons    |
+| `/join course`                | Everyone    | Join a public course           |
+| `/join team`                  | Everyone    | Join a course team             |
+| `/leave course`               | Everyone    | Leave a course                 |
+| `/leave team`                 | Everyone    | Leave a course team            |
+| `/course add`                 | Moderators  | Create a new course            |
+| `/course remove`              | Moderators  | Remove a course                |
+| `/course add-teams`           | Moderators  | Add teams to a course          |
+| `/course remove-teams`        | Moderators  | Remove teams from a course     |
+| `/course clear`               | Moderators  | Reset a course _(coming soon)_ |
 
 ---
 

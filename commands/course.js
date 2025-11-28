@@ -129,25 +129,91 @@ module.exports = {
       return;
     }
 
-    // /course add-teams - Coming soon
+    // /course add-teams - Show course selector, then modal for team names
     if (subcommand === 'add-teams') {
       if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ ephemeral: true });
       }
-      await interaction.editReply({
-        content: '🚧 `/course add-teams` is coming soon!',
-      });
+
+      if (!Course) {
+        logger.error('Database models not available');
+        await interaction.editReply({
+          content: '❌ Database is not available. Please contact a Moderator!',
+        });
+        return;
+      }
+
+      try {
+        const courses = await Course.findAll();
+
+        if (courses.length === 0) {
+          await interaction.editReply({
+            content:
+              'ℹ️ There are no courses. Create a course first with `/course add`.',
+          });
+          return;
+        }
+
+        const row = courseSelectorActionRowFactory('add-teams', courses);
+        await interaction.editReply({
+          content: '❔ Choose a course to **add teams** to:',
+          components: [row],
+        });
+      } catch (error) {
+        logger.error('Error in /course add-teams command:', error);
+        await interaction.editReply({
+          content: `❌ Error: ${error.message}. Please contact a Moderator!`,
+        });
+      }
       return;
     }
 
-    // /course remove-teams - Coming soon
+    // /course remove-teams - Show course selector, then team multi-select
     if (subcommand === 'remove-teams') {
       if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ ephemeral: true });
       }
-      await interaction.editReply({
-        content: '🚧 `/course remove-teams` is coming soon!',
-      });
+
+      if (!Course || !CourseTeam) {
+        logger.error('Database models not available');
+        await interaction.editReply({
+          content: '❌ Database is not available. Please contact a Moderator!',
+        });
+        return;
+      }
+
+      try {
+        // Get courses that have teams
+        const courses = await Course.findAll({
+          include: [{ model: CourseTeam, as: 'CourseTeams' }],
+        });
+
+        // Filter to only courses with teams
+        const coursesWithTeams = courses.filter(
+          (c) => c.CourseTeams && c.CourseTeams.length > 0
+        );
+
+        if (coursesWithTeams.length === 0) {
+          await interaction.editReply({
+            content: 'ℹ️ There are no courses with teams to remove.',
+          });
+          return;
+        }
+
+        const row = courseSelectorActionRowFactory(
+          'remove-teams',
+          coursesWithTeams
+        );
+        await interaction.editReply({
+          content: '❔ Choose a course to **remove teams** from:',
+          components: [row],
+        });
+      } catch (error) {
+        logger.error('Error in /course remove-teams command:', error);
+        await interaction.editReply({
+          content: `❌ Error: ${error.message}. Please contact a Moderator!`,
+        });
+      }
       return;
     }
 

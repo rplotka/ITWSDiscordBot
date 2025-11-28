@@ -9,6 +9,29 @@ const {
 const { Op } = require('sequelize');
 const { CourseTeam } = require('./db');
 const logger = require('./logging');
+const { coursePermissions, courseChannelTopics } = require('./constants');
+
+/**
+ * Creates a modal for adding teams to a course
+ * @param {string} courseId - The ID of the course to add teams to
+ */
+const addTeamsModalFactory = (courseId) => {
+  const modal = new ModalBuilder()
+    .setCustomId(`add-teams-modal-${courseId}`)
+    .setTitle('Add Teams to Course');
+
+  const teamNamesInput = new TextInputBuilder()
+    .setCustomId('add-teams-modal-names')
+    .setLabel('Team names (comma-separated)')
+    .setPlaceholder('e.g. Alpha, Beta, Gamma or Team 1, Team 2, Team 3')
+    .setRequired(true)
+    .setStyle(TextInputStyle.Paragraph);
+
+  const row1 = new ActionRowBuilder().addComponents(teamNamesInput);
+  modal.addComponents(row1);
+
+  return modal;
+};
 
 const addCourseModalFactory = () => {
   const modal = new ModalBuilder()
@@ -105,6 +128,26 @@ const courseTeamSelectorActionRowFactory = (
         courseTeamsWithCourse.map((courseTeam) => ({
           label: `${courseTeam.title} (${courseTeam.Course.title})`,
           value: courseTeam.id.toString(),
+        }))
+      )
+  );
+
+/**
+ * Creates a multi-select dropdown for removing teams from a course
+ * @param {string} courseId - The course ID
+ * @param {CourseTeam[]} teams - Teams in the course
+ */
+const removeTeamsSelectorActionRowFactory = (courseId, teams) =>
+  new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`teams-remove-${courseId}`)
+      .setPlaceholder('Select teams to remove')
+      .setMinValues(1)
+      .setMaxValues(teams.length)
+      .setOptions(
+        teams.map((team) => ({
+          label: team.title,
+          value: team.id.toString(),
         }))
       )
   );
@@ -317,6 +360,155 @@ async function removeCourse(guild, course) {
 }
 
 /**
+ * Creates a single team for a course
+ * @param {Discord.Guild} guild
+ * @param {Course} course
+ * @param {string} teamName - Team name to create
+ * @param {Discord.CategoryChannel} courseCategory - The course category channel
+ * @returns {Promise<CourseTeam>} Created CourseTeam record
+ */
+async function createSingleTeam(guild, course, teamName, courseCategory) {
+  // Create team role
+  const teamRole = await guild.roles.create({
+    name: `${course.shortTitle} - ${teamName}`,
+    mentionable: true,
+    reason: `Team role for ${teamName} in course ${course.title}`,
+  });
+
+  // Get permissions for team channels
+  const teamPermissions = coursePermissions.team(
+    course.discordInstructorRoleId,
+    course.discordRoleId,
+    teamRole.id
+  );
+
+  // Create team text channel
+  const textChannel = await guild.channels.create({
+    name: `${course.shortTitle}-${teamName.toLowerCase().replace(/\s+/g, '-')}`,
+    type: ChannelType.GuildText,
+    topic: courseChannelTopics.team(teamName, course),
+    parent: courseCategory.id,
+    permissionOverwrites: teamPermissions,
+  });
+
+  // Create team voice channel
+  const voiceChannel = await guild.channels.create({
+    name: `${course.shortTitle} ${teamName} Voice`,
+    type: ChannelType.GuildVoice,
+    parent: courseCategory.id,
+    permissionOverwrites: teamPermissions,
+  });
+
+  // Save team to database
+  const courseTeam = await CourseTeam.create({
+    title: teamName,
+    discordTextChannelId: textChannel.id,
+    discordVoiceChannelId: voiceChannel.id,
+    discordRoleId: teamRole.id,
+    CourseId: course.id,
+  });
+
+  logger.info(`Created team "${teamName}" for course "${course.title}"`);
+  return courseTeam;
+}
+
+/**
+ * Creates teams for a course including roles and channels
+ * @param {Discord.Guild} guild
+ * @param {Course} course
+ * @param {string[]} teamNames - Array of team names to create
+ * @returns {Promise<CourseTeam[]>} Array of created CourseTeam records
+ */
+async function createTeamsForCourse(guild, course, teamNames) {
+  // Get the course category
+  const courseCategory = guild.channels.cache.get(course.discordCategoryId);
+  if (!courseCategory) {
+    throw new Error(`Course category not found for ${course.title}`);
+  }
+
+  // Filter out empty names and create teams sequentially
+  // We use sequential creation to avoid Discord rate limits
+  const validNames = teamNames.map((n) => n.trim()).filter((n) => n.length > 0);
+
+  const createdTeams = [];
+  await validNames.reduce(async (promise, teamName) => {
+    await promise;
+    const team = await createSingleTeam(
+      guild,
+      course,
+      teamName,
+      courseCategory
+    );
+    createdTeams.push(team);
+  }, Promise.resolve());
+
+  return createdTeams;
+}
+
+/**
+ * Removes a single team including its role and channels
+ * @param {Discord.Guild} guild
+ * @param {CourseTeam} team - CourseTeam record to remove
+ */
+async function removeSingleTeam(guild, team) {
+  // Delete role
+  if (team.discordRoleId) {
+    try {
+      await guild.roles.delete(team.discordRoleId, 'Team being removed');
+    } catch (error) {
+      logger.warn(
+        `Failed to delete role for team ${team.title}: ${error.message}`
+      );
+    }
+  }
+
+  // Delete text channel
+  if (team.discordTextChannelId) {
+    try {
+      await guild.channels.delete(
+        team.discordTextChannelId,
+        'Team being removed'
+      );
+    } catch (error) {
+      logger.warn(
+        `Failed to delete text channel for team ${team.title}: ${error.message}`
+      );
+    }
+  }
+
+  // Delete voice channel
+  if (team.discordVoiceChannelId) {
+    try {
+      await guild.channels.delete(
+        team.discordVoiceChannelId,
+        'Team being removed'
+      );
+    } catch (error) {
+      logger.warn(
+        `Failed to delete voice channel for team ${team.title}: ${error.message}`
+      );
+    }
+  }
+
+  // Delete from database
+  await team.destroy();
+  logger.info(`Removed team "${team.title}"`);
+}
+
+/**
+ * Removes teams from a course including their roles and channels
+ * @param {Discord.Guild} guild
+ * @param {CourseTeam[]} teams - Array of CourseTeam records to remove
+ */
+async function removeTeams(guild, teams) {
+  // Remove teams sequentially to avoid rate limits
+  await teams.reduce(async (promise, team) => {
+    await promise;
+    await removeSingleTeam(guild, team);
+  }, Promise.resolve());
+}
+
+/**
  * Attempts to toggle a specific role on a server member.
  *
  * @param {Discord.GuildMember} member Discord server member
@@ -337,12 +529,16 @@ async function toggleMemberRole(member, roleOrRoleId) {
 module.exports = {
   removeCourse,
   addCourseModalFactory,
+  addTeamsModalFactory,
   courseSelectorActionRowFactory,
   courseTeamSelectorActionRowFactory,
+  removeTeamsSelectorActionRowFactory,
   addMemberToCourse,
   removeMemberFromCourse,
   addMemberToCourseTeam,
   removeMemberFromCourseTeam,
   findCourseGeneralChannel,
   toggleMemberRole,
+  createTeamsForCourse,
+  removeTeams,
 };
