@@ -37,16 +37,6 @@ eventFiles.forEach((file) => {
   }
 
   client[event.once ? 'once' : 'on'](event.name, async (...args) => {
-    // Debug: log all interactionCreate events
-    if (event.name === 'interactionCreate' && args[0]) {
-      const interaction = args[0];
-      if (interaction.isStringSelectMenu && interaction.isStringSelectMenu()) {
-        logger.info(
-          `[INDEX] StringSelectMenu: customId=${interaction.customId}, handler=${file}`
-        );
-      }
-    }
-
     try {
       await event.execute(...args);
     } catch (error) {
@@ -108,15 +98,6 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   logger.info(`HTTP server listening on port ${PORT}`);
-});
-
-// Debug: Add a global listener to catch ALL interactions
-client.on('interactionCreate', (interaction) => {
-  if (interaction.isStringSelectMenu()) {
-    logger.info(
-      `[GLOBAL] StringSelectMenu received: customId=${interaction.customId}, user=${interaction.user?.tag}`
-    );
-  }
 });
 
 // Login to Discord with the bot token

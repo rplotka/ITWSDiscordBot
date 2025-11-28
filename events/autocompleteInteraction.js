@@ -107,12 +107,9 @@ async function handleInstructorAutocomplete(interaction, query) {
   let memberList;
   if (members.size > 0) {
     memberList = Array.from(members.values());
-    logger.info(
-      `Instructor autocomplete: Found ${memberList.length} faculty/instructor members`
-    );
   } else {
     // Fallback: get all members if no faculty/instructor role exists
-    logger.info(
+    logger.warn(
       'Instructor autocomplete: No faculty roles found, falling back to all members'
     );
     try {
