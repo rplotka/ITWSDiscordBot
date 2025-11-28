@@ -52,9 +52,14 @@ jobs:
         run: |
           IMAGE_TAG="gcr.io/$PROJECT_ID/$SERVICE_NAME:${{ github.sha }}"
           # Build and push Docker image
-          # Note: Using default Cloud Build service account to avoid logging bucket issues
-          # The authenticated service account is used for deployment, not build
-          gcloud builds submit --tag $IMAGE_TAG --project=$PROJECT_ID
+          # Use --async to avoid log streaming permission issues
+          # The build will complete in the background
+          BUILD_ID=$(gcloud builds submit --async --tag $IMAGE_TAG --project=$PROJECT_ID | grep -oP 'id: \K[^ ]+')
+          echo "Build started with ID: $BUILD_ID"
+          echo "Waiting for build to complete..."
+          gcloud builds log $BUILD_ID --project=$PROJECT_ID --stream || true
+          # Wait for build to finish
+          gcloud builds wait $BUILD_ID --project=$PROJECT_ID
       
       - name: Deploy to Cloud Run
         run: |
