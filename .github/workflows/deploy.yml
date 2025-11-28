@@ -7,7 +7,7 @@ on:
       - 'v*'
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID || 'itws-discord-bot' }}
   REGION: us-central1
   SERVICE_NAME: itws-discord-bot
 
@@ -41,6 +41,9 @@ jobs:
       
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Set project
+        run: gcloud config set project $PROJECT_ID
       
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker
