@@ -44,7 +44,7 @@ async function handleRemoveCourse(interaction) {
           `• Course category and all channels\n` +
           `• ${teamCount} team(s) with their roles and channels\n\n` +
           `Select the course again from the dropdown to confirm.`,
-        components: [courseSelectorActionRowFactory('remove-course', [course])],
+        components: [courseSelectorActionRowFactory('remove', [course])],
       });
     } catch (error) {
       logger.error('Error in /remove course:', error);
@@ -66,7 +66,7 @@ async function handleRemoveCourse(interaction) {
       return;
     }
 
-    const row = courseSelectorActionRowFactory('remove-course', courses);
+    const row = courseSelectorActionRowFactory('remove', courses);
     await interaction.editReply({
       content:
         '❔ Choose a course to **remove**:\n\n' +
