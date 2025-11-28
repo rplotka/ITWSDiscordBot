@@ -26,17 +26,17 @@ The plan includes:
 - [ ] Test `/join team` command
 - [ ] Test `/leave course` command
 - [ ] Test `/leave team` command
-- [ ] Test `/admin courses add` command
-- [ ] Test `/admin courses remove` command
+- [ ] Test `/course add` command
+- [ ] Test `/course remove` command
 - [ ] Fix any broken functionality
 
 **Status:** Most commands working, need final verification
 
 ---
 
-## Phase 2: Complete Remaining Admin Commands
+## Phase 2: Complete Remaining Course Commands
 
-### 2.1 Implement `/admin courses add-teams`
+### 2.1 Implement `/course add-teams`
 
 **Goal:** Add teams to an existing course
 
@@ -52,7 +52,7 @@ The plan includes:
 
 **Implementation Steps:**
 
-1. Add handler in `commands/admin.js` for `add-teams` subcommand
+1. Add handler in `commands/course.js` for `add-teams` subcommand
 2. Create course selector dropdown
 3. Create modal for team configuration
 4. Create event handler for team modal submission
@@ -61,7 +61,7 @@ The plan includes:
 
 ---
 
-### 2.2 Implement `/admin courses remove-teams`
+### 2.2 Implement `/course remove-teams`
 
 **Goal:** Remove teams from a course
 
@@ -75,7 +75,7 @@ The plan includes:
 
 **Implementation Steps:**
 
-1. Add handler in `commands/admin.js` for `remove-teams` subcommand
+1. Add handler in `commands/course.js` for `remove-teams` subcommand
 2. Create course selector dropdown
 3. Create team selector (multi-select) for selected course
 4. Create event handler for team removal
@@ -84,7 +84,7 @@ The plan includes:
 
 ---
 
-### 2.3 Implement `/admin courses clear`
+### 2.3 Implement `/course clear`
 
 **Goal:** Reset a course without deleting it
 
@@ -99,7 +99,7 @@ The plan includes:
 
 **Implementation Steps:**
 
-1. Add handler in `commands/admin.js` for `clear` subcommand
+1. Add handler in `commands/course.js` for `clear` subcommand
 2. Create course selector dropdown
 3. Create confirmation modal
 4. Implement student removal logic
@@ -125,7 +125,7 @@ The plan includes:
 
 1. Add environment variable: `DISCORD_COURSE_MANAGER_ROLE_ID` (optional)
 2. Create `isCourseManagerOrAbove()` function in `core/permissions.js`
-3. Update `commands/admin.js` to use new permission check
+3. Update `commands/course.js` to use new permission check
 4. Update permission checks in command handler
 5. Document the role requirement
 
@@ -266,11 +266,11 @@ The plan includes:
 
 ```javascript
 const commandHelp = {
-  admin: {
+  course: {
     description: "Manage courses and teams",
     subcommands: {
-      "courses add": { ... },
-      "courses remove": { ... },
+      "add": { ... },
+      "remove": { ... },
       // etc.
     },
     examples: [ ... ],
@@ -514,8 +514,8 @@ require_approval: true # Manual merge required for auto-fixes
 ### High Priority (Core Functionality)
 
 1. ✅ Fix existing commands
-2. Implement `/admin courses add-teams`
-3. Implement `/admin courses remove-teams`
+2. Implement `/course add-teams`
+3. Implement `/course remove-teams`
 4. Create role-based permission system
 
 ### Medium Priority (User Experience)
@@ -528,7 +528,7 @@ require_approval: true # Manual merge required for auto-fixes
 
 ### Low Priority (Nice to Have)
 
-10. Implement `/admin courses clear`
+10. Implement `/course clear`
 11. Additional modal improvements
 12. Enhanced error messages
 13. Implement CodeAnt AI (Phase 7.3) - Optional

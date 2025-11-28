@@ -12,9 +12,12 @@ This guide explains how to use all available commands in the ITWS Discord Bot.
   - [Leave Course](#leave-course)
   - [Join Course Team](#join-course-team)
   - [Leave Course Team](#leave-course-team)
-- [Administrator Commands](#administrator-commands)
+- [Course Management Commands (Moderator)](#course-management-commands-moderator)
   - [Add Course](#add-course)
   - [Remove Course](#remove-course)
+  - [Add Teams](#add-teams)
+  - [Remove Teams](#remove-teams)
+  - [Clear Course](#clear-course)
 
 ---
 
@@ -237,28 +240,23 @@ Bot: ✅ You've been removed from Team Alpha.
 
 ---
 
-## Administrator Commands
+## Course Management Commands (Moderator)
 
-> **Note:** All admin commands require Moderator or Administrator permissions.
+> **Note:** All course management commands require Moderator or Administrator permissions.
 
-### Available Admin Commands
+### Available Course Commands
 
-The following admin commands are currently implemented:
-
-- `/admin courses add` - Create a new course
-- `/admin courses remove` - Remove a course
-
-**Coming Soon:**
-
-- `/admin courses add-teams` - Add teams to an existing course
-- `/admin courses remove-teams` - Remove teams from a course
-- `/admin courses clear` - Reset a course (remove students, clear channels)
+- `/course add` - Create a new course
+- `/course remove` - Remove a course
+- `/course add-teams` - Add teams to an existing course _(coming soon)_
+- `/course remove-teams` - Remove teams from a course _(coming soon)_
+- `/course clear` - Reset a course (remove students, clear channels) _(coming soon)_
 
 ---
 
 ### Add Course
 
-**Command:** `/admin courses add`
+**Command:** `/course add`
 
 **Description:** Create a new course with roles and channels. This sets up a complete course structure in Discord.
 
@@ -267,7 +265,7 @@ The following admin commands are currently implemented:
 **Example:**
 
 ```
-/admin courses add
+/course add
 ```
 
 **What happens:**
@@ -287,7 +285,7 @@ The following admin commands are currently implemented:
 **Example interaction:**
 
 ```
-You: /admin courses add
+You: /course add
 Bot: [Modal form appears]
 
 Modal Fields:
@@ -320,7 +318,7 @@ Bot: 🎉 Created course, roles, and channels!
 
 ### Remove Course
 
-**Command:** `/admin courses remove`
+**Command:** `/course remove`
 
 **Description:** Remove a course and all its associated roles and channels. **Warning:** This will delete message history!
 
@@ -329,7 +327,7 @@ Bot: 🎉 Created course, roles, and channels!
 **Example:**
 
 ```
-/admin courses remove
+/course remove
 ```
 
 **What happens:**
@@ -348,7 +346,7 @@ Bot: 🎉 Created course, roles, and channels!
 **Example interaction:**
 
 ```
-You: /admin courses remove
+You: /course remove
 Bot: ❔ Choose a course to remove. Note that this will lose message history.
      [Dropdown menu appears with all courses]
 You: [Select "Introduction to ITWS" from dropdown]
@@ -357,20 +355,57 @@ Bot: ✅ Course "Introduction to ITWS" has been removed along with all roles and
 
 ---
 
+### Add Teams
+
+**Command:** `/course add-teams`
+
+**Description:** Add teams to an existing course. Teams have their own private text and voice channels.
+
+**Who can use:** Moderators and Administrators only
+
+**Status:** 🚧 Coming soon
+
+---
+
+### Remove Teams
+
+**Command:** `/course remove-teams`
+
+**Description:** Remove teams from a course and delete their associated roles and channels.
+
+**Who can use:** Moderators and Administrators only
+
+**Status:** 🚧 Coming soon
+
+---
+
+### Clear Course
+
+**Command:** `/course clear`
+
+**Description:** Reset a course by removing all students and clearing channel messages, while keeping the course structure intact.
+
+**Who can use:** Moderators and Administrators only
+
+**Status:** 🚧 Coming soon
+
+---
+
 ## Command Summary
 
-| Command                       | Who Can Use | Purpose                     |
-| ----------------------------- | ----------- | --------------------------- |
-| `/help`                       | Everyone    | List all commands           |
-| `/test item:Send Role Button` | Moderators  | Post role selection buttons |
-| `/join course`                | Everyone    | Join a public course        |
-| `/join team`                  | Everyone    | Join a course team          |
-| `/leave course`               | Everyone    | Leave a course              |
-| `/leave team`                 | Everyone    | Leave a course team         |
-| `/admin courses add`          | Moderators  | Create a new course         |
-| `/admin courses remove`       | Moderators  | Remove a course             |
-
-**Note:** Additional admin commands (`add-teams`, `remove-teams`, `clear`) are planned but not yet implemented.
+| Command                       | Who Can Use | Purpose                                    |
+| ----------------------------- | ----------- | ------------------------------------------ |
+| `/help`                       | Everyone    | List all commands                          |
+| `/test item:Send Role Button` | Moderators  | Post role selection buttons                |
+| `/join course`                | Everyone    | Join a public course                       |
+| `/join team`                  | Everyone    | Join a course team                         |
+| `/leave course`               | Everyone    | Leave a course                             |
+| `/leave team`                 | Everyone    | Leave a course team                        |
+| `/course add`                 | Moderators  | Create a new course                        |
+| `/course remove`              | Moderators  | Remove a course                            |
+| `/course add-teams`           | Moderators  | Add teams to a course _(coming soon)_      |
+| `/course remove-teams`        | Moderators  | Remove teams from a course _(coming soon)_ |
+| `/course clear`               | Moderators  | Reset a course _(coming soon)_             |
 
 ---
 
