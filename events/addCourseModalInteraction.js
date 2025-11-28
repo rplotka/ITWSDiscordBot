@@ -2,6 +2,10 @@ const { ChannelType, PermissionFlagsBits } = require('discord.js');
 const { coursePermissions, courseChannelTopics } = require('../core/constants');
 const { Course } = require('../core/db');
 const logger = require('../core/logging');
+const {
+  generateSequentialTeamNames,
+  createTeamsForCourse,
+} = require('../core/utils');
 
 /**
  * Attempts to create a new instructor Discord role named after the given course,
@@ -128,12 +132,13 @@ module.exports = {
       const val = (fieldName) =>
         interaction.fields.getTextInputValue(fieldName);
 
-      const title = val('add-course-modal-title');
-      const shortTitle = val('add-course-modal-short-title');
-      const instructors = val('add-course-modal-instructors')
+      const title = val('add-course-title');
+      const shortTitle = val('add-course-short');
+      const instructors = val('add-course-instructor')
         .split(',')
         .map((value) => value.trim())
         .filter((value) => value);
+      const teamsCount = parseInt(val('add-course-teams'), 10) || 0;
 
       // const courseIsPublicField = interaction.fields.getField(
       //   'add-course-modal-is-public'
@@ -215,14 +220,42 @@ module.exports = {
         return;
       }
 
+      // Create teams if requested
+      let teamsMessage = '';
+      if (teamsCount > 0) {
+        try {
+          await interaction.editReply({
+            content: `⏳ Creating ${teamsCount} team(s)...`,
+          });
+
+          const teamNames = generateSequentialTeamNames(
+            shortTitle,
+            teamsCount,
+            1
+          );
+          const createdTeams = await createTeamsForCourse(
+            interaction.guild,
+            newCourse,
+            teamNames
+          );
+
+          teamsMessage = `• ${createdTeams.length} team(s) created\n`;
+          logger.info(
+            `Created ${createdTeams.length} teams for ${newCourse.title}`
+          );
+        } catch (error) {
+          logger.error('Error creating teams:', error);
+          teamsMessage = `• ⚠️ Team creation failed: ${error.message}\n`;
+        }
+      }
+
       // Send success message
       const successMessage =
         `🎉 **Course created successfully!**\n\n` +
         `**${newCourse.title}** is now set up with:\n` +
         `• Course category and channels\n` +
         `• Student role: **${newCourse.title}**\n` +
-        `• Instructor role: **${newCourse.title} Instructor**\n\n` +
-        `**Next step:** Assign the instructor role to the course instructors.`;
+        `• Instructor role: **${newCourse.title} Instructor**\n${teamsMessage}\n**Next step:** Assign the instructor role to the course instructors.`;
 
       try {
         await interaction.editReply({
