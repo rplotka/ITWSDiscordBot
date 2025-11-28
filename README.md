@@ -9,18 +9,29 @@ The ITWS Discord bot manages the ITWS Discord server by managing courses' roles,
 
 ## Commands
 
-Check out the `commands/` folder for all of the available commands. In the object that each exports is a name, description, and details of subcommands with descriptions.
+Check out the `commands/` folder for all of the available commands. See [USER_GUIDE.md](USER_GUIDE.md) for detailed usage instructions.
 
-- /join course
-- /join team
-- /leave course
-- /leave team
-- /test
-- /admin courses add
-- /admin courses add-teams
-- /admin courses remove
-- /admin courses remove-teams
-- /admin courses clear
+### User Commands
+
+- `/join course` - Join a public course
+- `/join team` - Join a team within a course
+- `/leave course` - Leave a course
+- `/leave team` - Leave a team
+
+### Moderator Commands
+
+- `/add course` - Create a new course with roles and channels
+- `/add team` - Add teams to an existing course
+- `/remove course` - Remove a course and all its roles/channels
+- `/remove team` - Remove teams from a course
+- `/course clear` - Reset a course (remove students, clear messages)
+- `/list course [name|*]` - List course(s) with details
+- `/list channel [pattern]` - List channels matching a pattern
+
+### Other Commands
+
+- `/help` - List all available commands
+- `/test` - Send role selection buttons (Moderator only)
 
 ## Development
 
