@@ -1,4 +1,3 @@
-const { Course } = require('../core/db');
 const logger = require('../core/logging');
 const { addTeamsModalFactory } = require('../core/utils');
 
@@ -24,19 +23,10 @@ module.exports = {
     );
 
     try {
-      // Verify course exists
-      const course = await Course.findByPk(courseId);
-      if (!course) {
-        await interaction.reply({
-          content: '❌ Course not found.',
-          ephemeral: true,
-        });
-        return;
-      }
-
-      // Show modal for team names - must be done within 3 seconds
+      // Show modal immediately - must be done within 3 seconds
+      // Course validation will happen in the modal submission handler
       await interaction.showModal(addTeamsModalFactory(courseId));
-      logger.info(`Add teams modal shown for course ${course.title}`);
+      logger.info(`Add teams modal shown for course ID ${courseId}`);
     } catch (error) {
       logger.error('Error in add-teams course selection:', error);
       try {
