@@ -92,6 +92,10 @@ module.exports = {
 
     // Wrap everything in try-catch to catch any unhandled errors
     try {
+      // CRITICAL: Defer reply IMMEDIATELY to prevent "Application did not respond" error
+      // Discord gives us only 3 seconds to acknowledge the interaction
+      await interaction.deferReply({ ephemeral: true });
+
       // Check permissions here since we skipped it in command handler
       if (interaction.member?.permissions) {
         const hasAdmin = interaction.member.permissions.has(
@@ -101,15 +105,12 @@ module.exports = {
           PermissionFlagsBits.ManageGuild
         );
         if (!hasAdmin && !hasManageGuild) {
-          await interaction.reply({
+          await interaction.editReply({
             content: '❌ Only moderators can create courses!',
-            ephemeral: true,
           });
           return;
         }
       }
-
-      await interaction.deferReply({ ephemeral: true });
 
       logger.info(`${interaction.member} submitted the new course modal`);
 

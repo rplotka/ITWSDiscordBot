@@ -22,7 +22,8 @@ module.exports = {
 
     logger.info(`${interaction.user} selected course ID ${courseId} to REMOVE`);
 
-    await interaction.deferReply({ ephemeral: true });
+    // Use deferUpdate for select menu interactions (updates the original message)
+    await interaction.deferUpdate();
 
     // Find course they want to REMOVE
     const course = await Course.findByPk(courseId);
