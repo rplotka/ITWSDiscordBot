@@ -214,13 +214,14 @@ module.exports = {
         return;
       }
 
-      // Send success message - use simpler format to avoid any formatting issues
+      // Send success message
       const successMessage =
-        `🎉 **Created course, roles, and channels!**\n\n` +
-        `Course: **${newCourse.title}**\n` +
-        `Instructor Role ID: \`${newCourse.discordInstructorRoleId}\`\n` +
-        `Course Role ID: \`${newCourse.discordRoleId}\`\n\n` +
-        `Now assign the instructor role to all instructors. You will see the course category and channels in the sidebar.`;
+        `🎉 **Course created successfully!**\n\n` +
+        `**${newCourse.title}** is now set up with:\n` +
+        `• Course category and channels\n` +
+        `• Student role: **${newCourse.title}**\n` +
+        `• Instructor role: **${newCourse.title} Instructor**\n\n` +
+        `**Next step:** Assign the instructor role to the course instructors.`;
 
       try {
         await interaction.editReply({
