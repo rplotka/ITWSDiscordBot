@@ -50,7 +50,7 @@ module.exports = {
       const { commands } = interaction.client;
 
       // Group commands by category
-      const courseCommands = [];
+      const modCommands = [];
       const userCommands = [];
       const otherCommands = [];
 
@@ -60,11 +60,16 @@ module.exports = {
           const isModOnly = command.isModeratorOnly || false;
           const subcommands = getSubcommands(command.data);
 
-          if (commandName === 'course') {
-            // Course management commands - show all subcommands
+          if (
+            commandName === 'add' ||
+            commandName === 'remove' ||
+            commandName === 'course' ||
+            commandName === 'list'
+          ) {
+            // Moderator commands - show all subcommands
             subcommands.forEach((sub) => {
-              courseCommands.push(
-                `  \`/course ${sub.name}\` - ${sub.description}`
+              modCommands.push(
+                `  \`/${commandName} ${sub.name}\` - ${sub.description}`
               );
             });
           } else if (commandName === 'join' || commandName === 'leave') {
@@ -105,12 +110,8 @@ module.exports = {
       // Build the help text
       const sections = [];
 
-      if (courseCommands.length > 0) {
-        sections.push(
-          `**📚 Course Management** *(Moderator only)*\n${courseCommands.join(
-            '\n'
-          )}`
-        );
+      if (modCommands.length > 0) {
+        sections.push(`**📚 Moderator Commands**\n${modCommands.join('\n')}`);
       }
 
       if (userCommands.length > 0) {
