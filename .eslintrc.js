@@ -15,14 +15,18 @@ module.exports = {
     'node_modules/**',
     'coverage/**',
     'vitest.config.js',
+    'test/smoke/**', // CLI smoke tests use console.log intentionally
   ],
   overrides: [
     {
       files: ['test/**/*.js'],
       parserOptions: {
         sourceType: 'module',
+        ecmaVersion: 2022, // Enable top-level await
       },
       rules: {
+        // Allow import/first violations due to vi.mock hoisting
+        'import/first': 'off',
         // Allow ESM imports in test files
         'import/no-unresolved': 'off',
         'import/no-dynamic-require': 'off',
