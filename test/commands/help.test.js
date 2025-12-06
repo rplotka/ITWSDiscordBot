@@ -43,18 +43,11 @@ describe('/help command', () => {
       expect(options[0].required).toBe(false);
     });
 
-    it('has command choices for all documented commands', () => {
+    it('has autocomplete enabled for command option', () => {
       const options = helpCommand.data.options;
       const commandOption = options[0];
-      const choices = commandOption.choices;
 
-      expect(choices).toContainEqual({ name: 'add', value: 'add' });
-      expect(choices).toContainEqual({ name: 'clear', value: 'clear' });
-      expect(choices).toContainEqual({ name: 'join', value: 'join' });
-      expect(choices).toContainEqual({ name: 'leave', value: 'leave' });
-      expect(choices).toContainEqual({ name: 'list', value: 'list' });
-      expect(choices).toContainEqual({ name: 'remove', value: 'remove' });
-      expect(choices).toContainEqual({ name: 'sync', value: 'sync' });
+      expect(commandOption.autocomplete).toBe(true);
     });
   });
 

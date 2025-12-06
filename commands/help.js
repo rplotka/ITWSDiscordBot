@@ -315,17 +315,9 @@ module.exports = {
     .addStringOption((option) =>
       option
         .setName('command')
-        .setDescription('Command to get help for')
+        .setDescription('Command to get help for (e.g., add, join, clear)')
         .setRequired(false)
-        .addChoices(
-          { name: 'add', value: 'add' },
-          { name: 'clear', value: 'clear' },
-          { name: 'join', value: 'join' },
-          { name: 'leave', value: 'leave' },
-          { name: 'list', value: 'list' },
-          { name: 'remove', value: 'remove' },
-          { name: 'sync', value: 'sync' }
-        )
+        .setAutocomplete(true)
     ),
   /**
    * @param {import('discord.js').CommandInteraction} interaction

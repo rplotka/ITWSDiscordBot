@@ -181,6 +181,43 @@ async function handleCategoryAutocomplete(interaction, query) {
   );
 }
 
+/**
+ * Handle help command autocomplete
+ */
+async function handleHelpCommandAutocomplete(interaction, query) {
+  const commands = [
+    {
+      name: 'add',
+      description: 'Create courses, teams, channels, import students',
+    },
+    {
+      name: 'clear',
+      description: 'Remove students from courses or delete messages',
+    },
+    { name: 'join', description: 'Join courses and teams' },
+    { name: 'leave', description: 'Leave courses and teams' },
+    { name: 'list', description: 'Search and list courses or channels' },
+    { name: 'remove', description: 'Delete courses, teams, or channels' },
+    { name: 'sync', description: 'Sync course data from external sources' },
+    { name: 'help', description: 'Get help with bot commands' },
+  ];
+
+  const filtered = commands
+    .filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        c.description.toLowerCase().includes(query)
+    )
+    .slice(0, 25);
+
+  await interaction.respond(
+    filtered.map((c) => ({
+      name: `${c.name} - ${c.description}`,
+      value: c.name,
+    }))
+  );
+}
+
 module.exports = {
   name: 'interactionCreate',
   once: false,
@@ -223,6 +260,12 @@ module.exports = {
       // Category autocomplete
       if (focusedName === 'category') {
         await handleCategoryAutocomplete(interaction, query);
+        return;
+      }
+
+      // Help command autocomplete
+      if (interaction.commandName === 'help' && focusedName === 'command') {
+        await handleHelpCommandAutocomplete(interaction, query);
         return;
       }
 
