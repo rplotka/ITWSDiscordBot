@@ -19,6 +19,9 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
+// Increase max listeners to accommodate all event handlers (we have 18 event files)
+client.setMaxListeners(20);
+
 // Find event listeners
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = readdirSync(eventsPath).filter((file) =>
