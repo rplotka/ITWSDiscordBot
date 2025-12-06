@@ -44,7 +44,8 @@
     "pg": "^8.7.3",
     "pg-hstore": "^2.3.4",
     "pino": "^7.11.0",
-    "sequelize": "^6.20.1"
+    "sequelize": "^6.20.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.14",

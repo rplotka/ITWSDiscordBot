@@ -4,7 +4,7 @@ const {
   ButtonStyle,
   ChannelType,
 } = require('discord.js');
-const { Course } = require('../core/db');
+const { Course, CourseTeam } = require('../core/db');
 const logger = require('../core/logging');
 
 // Store pending deletions temporarily (role IDs to delete after confirmation)
@@ -493,13 +493,258 @@ module.exports = {
           return;
         }
 
+        // Find all database entries that reference non-existent Discord resources
+        const courses = await Course.findAll({
+          include: [{ model: CourseTeam, as: 'CourseTeams' }],
+        });
+
+        const toClean = {
+          courses: [],
+          teams: [],
+        };
+
+        courses.forEach((course) => {
+          let courseMissing = false;
+
+          // Check if course role exists
+          if (course.discordRoleId) {
+            const role = interaction.guild.roles.cache.get(
+              course.discordRoleId
+            );
+            if (!role) courseMissing = true;
+          }
+
+          // Check if category exists
+          if (course.discordCategoryId) {
+            const category = interaction.guild.channels.cache.get(
+              course.discordCategoryId
+            );
+            if (!category) courseMissing = true;
+          }
+
+          if (courseMissing) {
+            toClean.courses.push({
+              id: course.id,
+              title: course.title,
+            });
+          }
+
+          // Check teams
+          if (course.CourseTeams) {
+            course.CourseTeams.forEach((team) => {
+              let teamMissing = false;
+
+              if (team.discordRoleId) {
+                const role = interaction.guild.roles.cache.get(
+                  team.discordRoleId
+                );
+                if (!role) teamMissing = true;
+              }
+
+              if (team.discordTextChannelId) {
+                const channel = interaction.guild.channels.cache.get(
+                  team.discordTextChannelId
+                );
+                if (!channel) teamMissing = true;
+              }
+
+              if (teamMissing) {
+                toClean.teams.push({
+                  id: team.id,
+                  title: team.title,
+                  courseTitle: course.title,
+                });
+              }
+            });
+          }
+        });
+
+        const totalToClean = toClean.courses.length + toClean.teams.length;
+
+        if (totalToClean === 0) {
+          await interaction.editReply({
+            content:
+              '✅ **Database is clean!**\n\nNo orphaned entries found. All database entries have matching Discord resources.',
+            components: [],
+          });
+          return;
+        }
+
+        // Show confirmation
+        let report = `**🗑️ Clean Database**\n\n`;
+        report += `Found ${totalToClean} database entries with missing Discord resources:\n\n`;
+
+        if (toClean.courses.length > 0) {
+          report += `**Courses to remove (${toClean.courses.length}):**\n`;
+          toClean.courses.slice(0, 10).forEach((c) => {
+            report += `• ${c.title}\n`;
+          });
+          if (toClean.courses.length > 10) {
+            report += `  ... and ${toClean.courses.length - 10} more\n`;
+          }
+          report += '\n';
+        }
+
+        if (toClean.teams.length > 0) {
+          report += `**Teams to remove (${toClean.teams.length}):**\n`;
+          toClean.teams.slice(0, 10).forEach((t) => {
+            report += `• ${t.title} (${t.courseTitle})\n`;
+          });
+          if (toClean.teams.length > 10) {
+            report += `  ... and ${toClean.teams.length - 10} more\n`;
+          }
+          report += '\n';
+        }
+
+        report +=
+          '⚠️ **This will permanently delete these database entries.**\n' +
+          'Discord resources are already gone - this just cleans up the database.';
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('sync-confirm-clean-db')
+            .setLabel(`Delete ${totalToClean} Entries`)
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🗑️'),
+          new ButtonBuilder()
+            .setCustomId('sync-dismiss')
+            .setLabel('Cancel')
+            .setStyle(ButtonStyle.Secondary)
+        );
+
         await interaction.editReply({
-          content:
-            '**Clean Database** - This feature is not yet implemented.\n\n' +
-            'This would remove database entries for roles/channels that no longer exist in Discord.\n\n' +
-            'For now, you can manually remove courses using `/remove course`.',
+          content: report,
+          components: [row],
+        });
+        return;
+      }
+
+      // Confirm clean database - actually delete entries
+      if (action === 'sync-confirm-clean-db') {
+        await interaction.deferUpdate();
+
+        if (!Course) {
+          await interaction.editReply({
+            content: 'Database is not available.',
+            components: [],
+          });
+          return;
+        }
+
+        // Find and delete orphaned entries
+        const courses = await Course.findAll({
+          include: [{ model: CourseTeam, as: 'CourseTeams' }],
+        });
+
+        // Helper to check if course resources are missing
+        const isCourseOrphaned = (course) => {
+          if (course.discordRoleId) {
+            const role = interaction.guild.roles.cache.get(
+              course.discordRoleId
+            );
+            if (!role) return true;
+          }
+          if (course.discordCategoryId) {
+            const category = interaction.guild.channels.cache.get(
+              course.discordCategoryId
+            );
+            if (!category) return true;
+          }
+          return false;
+        };
+
+        // Helper to check if team resources are missing
+        const isTeamOrphaned = (team) => {
+          if (team.discordRoleId) {
+            const role = interaction.guild.roles.cache.get(team.discordRoleId);
+            if (!role) return true;
+          }
+          if (team.discordTextChannelId) {
+            const channel = interaction.guild.channels.cache.get(
+              team.discordTextChannelId
+            );
+            if (!channel) return true;
+          }
+          return false;
+        };
+
+        // Collect all orphaned teams across all courses
+        const orphanedTeams = courses.flatMap((course) =>
+          (course.CourseTeams || []).filter(isTeamOrphaned)
+        );
+
+        // Delete orphaned teams in parallel
+        const teamDeleteResults = await Promise.all(
+          orphanedTeams.map(async (team) => {
+            try {
+              await team.destroy();
+              logger.info(`Cleaned up orphaned team from DB: ${team.title}`);
+              return { success: true };
+            } catch (err) {
+              return {
+                success: false,
+                error: `Team ${team.title}: ${err.message}`,
+              };
+            }
+          })
+        );
+
+        const deletedTeams = teamDeleteResults.filter((r) => r.success).length;
+        const teamErrors = teamDeleteResults
+          .filter((r) => !r.success)
+          .map((r) => r.error);
+
+        // Find orphaned courses
+        const orphanedCourses = courses.filter(isCourseOrphaned);
+
+        // Delete orphaned courses in parallel
+        const courseDeleteResults = await Promise.all(
+          orphanedCourses.map(async (course) => {
+            try {
+              // Delete remaining teams first
+              await CourseTeam.destroy({ where: { CourseId: course.id } });
+              await course.destroy();
+              logger.info(
+                `Cleaned up orphaned course from DB: ${course.title}`
+              );
+              return { success: true };
+            } catch (err) {
+              return {
+                success: false,
+                error: `Course ${course.title}: ${err.message}`,
+              };
+            }
+          })
+        );
+
+        const deletedCourses = courseDeleteResults.filter(
+          (r) => r.success
+        ).length;
+        const courseErrors = courseDeleteResults
+          .filter((r) => !r.success)
+          .map((r) => r.error);
+
+        const errors = [...teamErrors, ...courseErrors];
+
+        let response = `**🗑️ Database Cleanup Complete**\n\n`;
+        response += `✅ Deleted ${deletedCourses} course(s)\n`;
+        response += `✅ Deleted ${deletedTeams} team(s)\n`;
+
+        if (errors.length > 0) {
+          response += `\n❌ Errors (${errors.length}):\n`;
+          errors.slice(0, 5).forEach((e) => {
+            response += `• ${e}\n`;
+          });
+        }
+
+        await interaction.editReply({
+          content: response,
           components: [],
         });
+
+        logger.info(
+          `Database cleanup: ${deletedCourses} courses, ${deletedTeams} teams deleted`
+        );
         return;
       }
 

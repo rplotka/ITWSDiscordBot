@@ -9,6 +9,7 @@ const {
 } = require('../core/utils');
 const { Course, CourseTeam } = require('../core/db');
 const logger = require('../core/logging');
+const { parseFile } = require('../core/fileParser');
 
 /**
  * Handle /add course command
@@ -214,7 +215,8 @@ async function handleAddChannel(interaction) {
 }
 
 /**
- * Handle /add students command (bulk import from CSV)
+ * Handle /add students command (bulk import from CSV/XLSX)
+ * Supports: SIS class lists, LMS group members, generic CSV
  */
 async function handleAddStudents(interaction) {
   const courseId = interaction.options.getString('course');
@@ -222,140 +224,284 @@ async function handleAddStudents(interaction) {
 
   await interaction.deferReply({ ephemeral: true });
 
-  if (!Course) {
-    await interaction.editReply({
-      content: '❌ Database is not available.',
-    });
-    return;
-  }
-
   try {
-    // Validate file
-    if (!file.name.endsWith('.csv')) {
+    // Validate file extension
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const hasValidExtension = validExtensions.some((ext) =>
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!hasValidExtension) {
       await interaction.editReply({
-        content: '❌ Please upload a CSV file.',
+        content: '❌ Please upload a CSV or Excel (.xlsx) file.',
       });
       return;
     }
 
-    // Get course
-    const course = await Course.findByPk(courseId);
-    if (!course) {
-      await interaction.editReply({
-        content: '❌ Course not found.',
-      });
-      return;
-    }
+    await interaction.editReply({
+      content: `⏳ Analyzing file: **${file.name}**...`,
+    });
 
-    // Fetch CSV content
+    // Fetch file content
     const response = await fetch(file.url);
-    const csvContent = await response.text();
+    const fileBuffer = await response.arrayBuffer();
+    const content = Buffer.from(fileBuffer);
 
-    // Parse CSV (simple parsing - assumes format: username,team)
-    const lines = csvContent.trim().split('\n');
-    const header = lines[0].toLowerCase();
-    const hasTeamColumn = header.includes('team');
+    // Parse the file
+    const parsed = await parseFile(file.name, content);
+
+    // Build preview based on file type
+    let preview = '';
+    let courseCode = null;
+    let students = [];
+    let groups = [];
+    let needsCourse = false;
+
+    switch (parsed.type) {
+      case 'sis_classlist': {
+        const { courseInfo, students: sisStudents } = parsed.data;
+        courseCode = courseInfo.courseCode;
+        students = sisStudents.map((s) => ({
+          identifier: s.studentId,
+          name: s.fullName,
+          firstName: s.firstName,
+          lastName: s.lastName,
+        }));
+
+        preview = `**📄 SIS Class List Detected**\n\n`;
+        preview += `**Course:** ${courseInfo.fullTitle || 'Unknown'}\n`;
+        preview += `**Code:** ${courseInfo.courseCode || 'Unknown'}\n`;
+        preview += `**Term:** ${courseInfo.termDisplay || 'Unknown'}\n`;
+        preview += `**CRN:** ${courseInfo.crn || 'Unknown'}\n`;
+        preview += `**Students:** ${students.length}\n`;
+        break;
+      }
+
+      case 'lms_groupmembers': {
+        courseCode = parsed.metadata.courseCode;
+        const { students: lmsStudents } = parsed.data;
+
+        // Group students by their group code
+        const groupCounts = {};
+        lmsStudents.forEach((s) => {
+          groupCounts[s.groupCode] = (groupCounts[s.groupCode] || 0) + 1;
+        });
+
+        students = lmsStudents.map((s) => ({
+          identifier: s.rcsId,
+          name: s.fullName,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          groupCode: s.groupCode,
+          studentId: s.studentId,
+        }));
+
+        preview = `**📄 LMS Group Members Detected**\n\n`;
+        preview += `**Course:** ${parsed.metadata.courseCode}\n`;
+        preview += `**Term:** ${parsed.metadata.term?.display || 'Unknown'}\n`;
+        preview += `**Section:** ${parsed.metadata.section}\n`;
+        preview += `**Students:** ${students.length}\n`;
+        preview += `**Groups:** ${Object.keys(groupCounts).length}\n`;
+        break;
+      }
+
+      case 'lms_groups': {
+        courseCode = parsed.metadata.courseCode;
+        groups = parsed.data.groups;
+
+        preview = `**📄 LMS Groups File Detected**\n\n`;
+        preview += `**Course:** ${parsed.metadata.courseCode}\n`;
+        preview += `**Term:** ${parsed.metadata.term?.display || 'Unknown'}\n`;
+        preview += `**Groups:** ${groups.length}\n\n`;
+        preview += `⚠️ This file only contains group definitions, not student data.\n`;
+        preview += `Upload a **groupmembers.csv** file to import students with team assignments.`;
+
+        await interaction.editReply({ content: preview });
+        return;
+      }
+
+      case 'generic_csv': {
+        const { students: csvStudents, detectedColumns } = parsed.data;
+        students = csvStudents.map((s) => ({
+          identifier: s.rcsId || s.email || s.discordUsername || s.studentId,
+          name: s.fullName,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          team: s.team,
+        }));
+
+        preview = `**📄 Generic CSV Detected**\n\n`;
+        preview += `**Students:** ${students.length}\n`;
+        preview += `**Detected columns:**\n`;
+        if (detectedColumns.username >= 0) preview += `• Username/RCS ID\n`;
+        if (detectedColumns.email >= 0) preview += `• Email\n`;
+        if (detectedColumns.firstName >= 0) preview += `• First Name\n`;
+        if (detectedColumns.lastName >= 0) preview += `• Last Name\n`;
+        if (detectedColumns.team >= 0) preview += `• Team/Group\n`;
+        if (detectedColumns.discordUsername >= 0)
+          preview += `• Discord Username\n`;
+        break;
+      }
+
+      default:
+        await interaction.editReply({
+          content: `❌ Could not parse file: ${file.name}\n\nSupported formats:\n• SIS class list (XXXXXX_CRN_classlist.xlsx)\n• LMS group members (timestamp_term_DEPT_XXXX_XX_groupmembers.csv)\n• Generic CSV with headers`,
+        });
+        return;
+    }
+
+    // Check if we have a course to work with
+    let course = null;
+    if (courseId) {
+      course = await Course.findByPk(courseId);
+    } else if (courseCode && Course) {
+      // Try to find course by code
+      const courses = await Course.findAll();
+      course = courses.find(
+        (c) =>
+          c.shortTitle === courseCode ||
+          c.title.includes(courseCode) ||
+          c.shortTitle?.toUpperCase() === courseCode?.toUpperCase()
+      );
+    }
+
+    if (!course) {
+      needsCourse = true;
+      preview += `\n⚠️ **No matching course found in database.**\n`;
+      if (courseCode) {
+        preview += `Looking for: ${courseCode}\n`;
+      }
+      preview += `Please select a course to import students to.`;
+    } else {
+      preview += `\n✅ **Matched to course:** ${course.title} (${course.shortTitle})\n`;
+    }
+
+    if (needsCourse && !courseId) {
+      // Need to select a course first
+      const courses = Course ? await Course.findAll() : [];
+      if (courses.length === 0) {
+        preview += `\n❌ No courses exist. Create a course first with \`/add course\`.`;
+        await interaction.editReply({ content: preview });
+        return;
+      }
+
+      const row = courseSelectorActionRowFactory(
+        'add-students-select',
+        courses
+      );
+
+      // Store parsed data in a temporary way for the button handler
+      // We'll use interaction.message editing to pass data
+      preview += `\n\n**Select a course to import ${students.length} students:**`;
+
+      await interaction.editReply({
+        content: preview,
+        components: [row],
+      });
+      return;
+    }
+
+    // We have a course - proceed with import preview
+    await interaction.editReply({
+      content: `${preview}\n\n⏳ Checking Discord members...`,
+    });
+
+    // Check which students are in Discord
+    await interaction.guild.members.fetch();
+
+    // Find members for each student
+    const memberPromises = students.map(async (student) => {
+      const member = await findMemberByIdentifier(
+        interaction.guild,
+        student.identifier
+      );
+      return { student, member };
+    });
+
+    const memberResults = await Promise.all(memberPromises);
 
     const results = {
-      added: 0,
+      found: [],
       notFound: [],
-      alreadyEnrolled: 0,
-      errors: [],
+      alreadyEnrolled: [],
     };
 
-    // Get course teams if needed
-    let courseTeams = [];
-    if (hasTeamColumn) {
-      courseTeams = await CourseTeam.findAll({
-        where: { CourseId: course.id },
-      });
-    }
-
-    await interaction.editReply({
-      content: `⏳ Processing ${lines.length - 1} students...`,
+    memberResults.forEach(({ student, member }) => {
+      if (!member) {
+        results.notFound.push(student);
+      } else if (course && member.roles.cache.has(course.discordRoleId)) {
+        results.alreadyEnrolled.push({ ...student, member });
+      } else {
+        results.found.push({ ...student, member });
+      }
     });
 
-    // Process each line (skip header)
-    const dataLines = lines.slice(1);
-    await dataLines.reduce(async (promise, line, index) => {
-      await promise;
+    // Build final preview
+    let finalPreview = `${preview}\n\n**📊 Import Preview:**\n`;
+    finalPreview += `• Ready to add: ${results.found.length}\n`;
+    finalPreview += `• Already enrolled: ${results.alreadyEnrolled.length}\n`;
+    finalPreview += `• Not in Discord: ${results.notFound.length}\n`;
 
-      const parts = line.split(',').map((p) => p.trim());
-      const username = parts[0];
-      const teamNum = hasTeamColumn && parts[1] ? parts[1] : null;
-
-      if (!username) return;
-
-      try {
-        // Find member
-        const member = await findMemberByIdentifier(
-          interaction.guild,
-          username
-        );
-
-        if (!member) {
-          results.notFound.push(username);
-          return;
-        }
-
-        // Check if already has course role
-        if (member.roles.cache.has(course.discordRoleId)) {
-          results.alreadyEnrolled += 1;
-        } else {
-          // Add course role
-          await member.roles.add(course.discordRoleId);
-          results.added += 1;
-        }
-
-        // Add team role if specified
-        if (teamNum && courseTeams.length > 0) {
-          const teamName = `${course.shortTitle}-Team-${teamNum.padStart(
-            2,
-            '0'
-          )}`;
-          const team = courseTeams.find((t) => t.title === teamName);
-          if (team && !member.roles.cache.has(team.discordRoleId)) {
-            await member.roles.add(team.discordRoleId);
-          }
-        }
-      } catch (error) {
-        results.errors.push(`${username}: ${error.message}`);
-      }
-
-      // Progress update every 10 students
-      if ((index + 1) % 10 === 0) {
-        await interaction.editReply({
-          content: `⏳ Processing... ${index + 1}/${dataLines.length}`,
-        });
-      }
-    }, Promise.resolve());
-
-    // Final report
-    let report = `✅ **Bulk Import Complete for ${course.title}**\n\n`;
-    report += `• Added: ${results.added}\n`;
-    report += `• Already enrolled: ${results.alreadyEnrolled}\n`;
-
-    if (results.notFound.length > 0) {
-      report += `• Not found (${results.notFound.length}): ${results.notFound
-        .slice(0, 10)
-        .join(', ')}`;
-      if (results.notFound.length > 10) {
-        report += ` ... and ${results.notFound.length - 10} more`;
-      }
-      report += '\n';
+    if (results.notFound.length > 0 && results.notFound.length <= 10) {
+      finalPreview += `\n**Not found:**\n`;
+      results.notFound.forEach((s) => {
+        finalPreview += `• ${s.name || s.identifier}\n`;
+      });
+    } else if (results.notFound.length > 10) {
+      finalPreview += `\n**Not found (first 10):**\n`;
+      results.notFound.slice(0, 10).forEach((s) => {
+        finalPreview += `• ${s.name || s.identifier}\n`;
+      });
+      finalPreview += `• ... and ${results.notFound.length - 10} more\n`;
     }
 
-    if (results.errors.length > 0) {
-      report += `• Errors: ${results.errors.length}\n`;
+    if (results.found.length === 0) {
+      finalPreview += `\n⚠️ No students to import (all already enrolled or not in Discord).`;
+      await interaction.editReply({ content: finalPreview });
+      return;
+    }
+
+    // Proceed with import
+    finalPreview += `\n⏳ **Importing ${results.found.length} students...**`;
+    await interaction.editReply({ content: finalPreview });
+
+    // Add roles to all found students in parallel batches
+    const addRoleResults = await Promise.all(
+      results.found.map(async (student) => {
+        try {
+          await student.member.roles.add(course.discordRoleId);
+          return { success: true, student };
+        } catch (err) {
+          return { success: false, student, error: err.message };
+        }
+      })
+    );
+
+    const added = addRoleResults.filter((r) => r.success).length;
+    const errors = addRoleResults
+      .filter((r) => !r.success)
+      .map((r) => `${r.student.name || r.student.identifier}: ${r.error}`);
+
+    // Final report
+    let report = `✅ **Import Complete for ${course.title}**\n\n`;
+    report += `**File:** ${file.name}\n`;
+    report += `**File type:** ${parsed.type.replace(/_/g, ' ')}\n\n`;
+    report += `**Results:**\n`;
+    report += `• Added to course: ${added}\n`;
+    report += `• Already enrolled: ${results.alreadyEnrolled.length}\n`;
+    report += `• Not in Discord: ${results.notFound.length}\n`;
+
+    if (errors.length > 0) {
+      report += `• Errors: ${errors.length}\n`;
     }
 
     await interaction.editReply({ content: report });
 
     logger.info(
-      `Bulk import: ${results.added} added, ${results.notFound.length} not found`
+      `Student import: ${added} added to ${course.title} from ${file.name}`
     );
   } catch (error) {
-    logger.error('Error in bulk import:', error);
+    logger.error('Error in student import:', error);
     await interaction.editReply({
       content: `❌ Error: ${error.message}`,
     });
@@ -451,23 +597,25 @@ module.exports = {
             .setRequired(false)
         )
     )
-    // /add students [course] [file] - placeholder for bulk import
+    // /add students <file> [course] - Smart import from CSV/XLSX
     .addSubcommand((subcommand) =>
       subcommand
         .setName('students')
-        .setDescription('Bulk add students from CSV file')
-        .addStringOption((option) =>
-          option
-            .setName('course')
-            .setDescription('Course to add students to')
-            .setAutocomplete(true)
-            .setRequired(true)
-        )
+        .setDescription('Import students from SIS/LMS files (CSV or XLSX)')
         .addAttachmentOption((option) =>
           option
             .setName('file')
-            .setDescription('CSV file with student usernames')
+            .setDescription('SIS class list (.xlsx) or LMS export (.csv)')
             .setRequired(true)
+        )
+        .addStringOption((option) =>
+          option
+            .setName('course')
+            .setDescription(
+              'Course to add students to (auto-detected from file if possible)'
+            )
+            .setAutocomplete(true)
+            .setRequired(false)
         )
     ),
   isModeratorOnly: true,

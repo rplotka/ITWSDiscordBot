@@ -53,14 +53,9 @@ describe('guildMemberAdd event', () => {
       expect(guildMemberAdd.name).toBe('guildMemberAdd');
     });
 
-    it('is a once handler', () => {
-      // This handler is marked as once: true
-      expect(guildMemberAdd.once).toBe(true);
-    });
-
-    it('is disabled', () => {
-      // This handler is currently disabled
-      expect(guildMemberAdd.disabled).toBe(true);
+    it('is not a once handler', () => {
+      // This handler should run for every member join
+      expect(guildMemberAdd.once).toBe(false);
     });
 
     it('exports execute function', () => {
@@ -75,23 +70,36 @@ describe('guildMemberAdd event', () => {
         id: 'new-member',
         username: 'newuser',
       });
-      // Mock the message.awaitMessageComponent to throw (timeout)
-      member.send.mockResolvedValue({
-        awaitMessageComponent: vi.fn().mockRejectedValue(new Error('Timeout')),
-        reply: vi.fn().mockResolvedValue({}),
-      });
+      member.send.mockResolvedValue({});
       member.guild = guild;
+      member.user = { bot: false, tag: 'newuser#0000', id: 'new-member' };
 
       // Execute the handler
       await guildMemberAdd.execute(member);
 
-      // Should have sent welcome message
+      // Should have sent welcome message with verification instructions
       expect(member.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: expect.stringContaining('Welcome'),
-          components: expect.any(Array),
-        })
+        expect.stringContaining('Welcome')
       );
+      expect(member.send).toHaveBeenCalledWith(
+        expect.stringContaining('/verify me')
+      );
+    });
+
+    it('skips bots', async () => {
+      const guild = createMockGuild({ id: 'test-guild' });
+      const member = createMockMember({
+        id: 'bot-member',
+        username: 'botuser',
+      });
+      member.guild = guild;
+      member.user = { bot: true, tag: 'botuser#0000', id: 'bot-member' };
+
+      // Execute the handler
+      await guildMemberAdd.execute(member);
+
+      // Should not have sent any message
+      expect(member.send).not.toHaveBeenCalled();
     });
   });
 });

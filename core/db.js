@@ -169,6 +169,149 @@ const Group = sequelize
     })
   : null;
 
+/**
+ * PendingVerification - Tracks users awaiting email verification
+ */
+const PendingVerification = sequelize
+  ? sequelize.define('PendingVerification', {
+      discordUserId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Discord user ID of the person being verified',
+      },
+      discordGuildId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Discord guild/server ID',
+      },
+      userType: {
+        type: DataTypes.ENUM(
+          'student',
+          'faculty',
+          'accepted_student',
+          'alumni',
+          'external'
+        ),
+        allowNull: false,
+        comment: 'Type of user being verified',
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Email address to verify',
+      },
+      realName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'User real name',
+      },
+      cohort: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Graduation year for students/alumni, start term for accepted',
+      },
+      courses: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment:
+          'Array of course codes for faculty (e.g., ["ITWS-1100", "ITWS-4500"])',
+      },
+      affiliation: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Affiliation/reason for external guests',
+      },
+      verificationCode: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        comment: 'Unique verification code sent via email',
+      },
+      expiresAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        comment: 'When this verification request expires',
+      },
+      initiatedBy: {
+        type: DataTypes.ENUM('self', 'moderator'),
+        allowNull: false,
+        defaultValue: 'self',
+        comment: 'Whether user self-initiated or moderator initiated',
+      },
+      moderatorId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Discord ID of moderator who initiated (if applicable)',
+      },
+    })
+  : null;
+
+/**
+ * VerifiedUser - Stores information about verified users
+ */
+const VerifiedUser = sequelize
+  ? sequelize.define('VerifiedUser', {
+      discordUserId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        comment: 'Discord user ID',
+      },
+      discordGuildId: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Discord guild/server ID',
+      },
+      userType: {
+        type: DataTypes.ENUM(
+          'student',
+          'faculty',
+          'accepted_student',
+          'alumni',
+          'external'
+        ),
+        allowNull: false,
+        comment: 'Type of verified user',
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Verified email address',
+      },
+      realName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'User real name',
+      },
+      rcsId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'RCS ID extracted from @rpi.edu email',
+      },
+      cohort: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Graduation year or start term',
+      },
+      courses: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: 'Courses taught (for faculty)',
+      },
+      affiliation: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Affiliation (for external)',
+      },
+      verifiedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+        comment: 'When user was verified',
+      },
+    })
+  : null;
+
 // Associations
 // https://sequelize.org/master/manual/assocs.html
 if (Course && CourseTeam) {
@@ -207,5 +350,7 @@ module.exports = {
   Course,
   CourseTeam,
   Group,
+  PendingVerification,
+  VerifiedUser,
   sequelize,
 };
